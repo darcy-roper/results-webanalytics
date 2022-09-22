@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-df = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/F.Jav_Top10.csv")
+df = pd.read_csv("Datasets/Event_Rankings_Top10.csv")
 df["PB"] = df["PB"].astype(float)
 df["SB"] = df["SB"].astype(float)
 

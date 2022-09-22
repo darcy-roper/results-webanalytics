@@ -7,7 +7,7 @@ import plotly.express as px
 #athlete_name = input("Get results for athlete: ")
 
 # reads the csv file in folder location specified
-dfb = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/Athlete Results/" + "Darcy Roper" + ".csv")
+dfb = pd.read_csv("Datasets/Athlete Results/" + "Darcy Roper" + ".csv")
 
 # converts int to a str so the data becomes discrete not continuous
 dfb["Season"] = dfb["Season"].astype(str)

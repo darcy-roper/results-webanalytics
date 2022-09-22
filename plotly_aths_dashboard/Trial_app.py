@@ -10,10 +10,10 @@ from dash import Dash, dcc, html, Input, Output
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # -- Import data (importing csv into pandas)
-df = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/Athlete Results/Kelsey-Lee Barber.csv")
-top10 = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/Event_Rankings_Top10.csv")
-nass_athletes = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/List of Nass Athletes.csv")
-champs_df = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/Championship_Results.csv") # this is all champs results
+df = pd.read_csv("Datasets/Athlete Results/Kelsey-Lee Barber.csv")
+top10 = pd.read_csv("Datasets/Event_Rankings_Top10.csv")
+nass_athletes = pd.read_csv("Datasets/List of Nass Athletes.csv")
+champs_df = pd.read_csv("Datasets/Championship_Results.csv") # this is all champs results
 
 df["Season"] = df["Season"].astype(str) # converts int to a str so the data becomes discrete not continuous
 

@@ -5,8 +5,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-df = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/Championship_Results.csv") # this is all champs results
-df2 = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/Athlete Results/Kelsey-Lee Barber.csv") # this is Kels's results
+df = pd.read_csv("Datasets/Championship_Results.csv") # this is all champs results
+df2 = pd.read_csv("Datasets/Athlete Results/Kelsey-Lee Barber.csv") # this is Kels's results
 df["RESULT"] = df["RESULT"].astype(float)
 df2["Result"] = df2["Result"].astype(float)
 

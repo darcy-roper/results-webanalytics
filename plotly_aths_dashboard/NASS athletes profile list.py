@@ -66,7 +66,7 @@ athlete_list = ["Kelsey-Lee Barber", "Nicola Olyslagers", "Ashley Moloney", "Pet
             "Chris Mitrevski", "Liz Parnova", "Jake Penny", "Jeffrey Riseley", "Will Roberts", "Brett Robinson"
             "Anneliese Rubie-Renshaw", "Steven Solomon", "Jess Stenson", "Ed Trippas", "Lisa Weightman", "Eloise Wellings", "Georgia Winkcup"]
 
-df = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/List of nass athletes.csv")
+df = pd.read_csv("Datasets/List of nass athletes.csv")
 
 # instruct to read column two of csv, vists url then run script
 # need an if statement to see if there's a secondary event to scrape that data also

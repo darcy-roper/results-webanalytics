@@ -2,7 +2,7 @@
 
 import pandas as pd
 import plotly.express as px
-df = pd.read_csv("/Users/newmac/Desktop/Athlete dashboard/NASS list (20-21).csv")
+df = pd.read_csv("Datasets/Athlete Results/Darcy Roper.csv")
 fig = px.scatter_geo(df, locations="Ctry", color="Continent", projection="natural earth", size="Competition_Count")
 
 fig.show()
