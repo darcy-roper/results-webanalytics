@@ -5,12 +5,11 @@ import requests
 import json
 import pandas as pd
 
-
 url = "https://txhj5c3pafc57aflonu6rhxtxu.appsync-api.eu-west-1.amazonaws.com/graphql"
 
-ath_id = '14550669'
-results = []
-for year in range(2012, 2023):
+ath_id = '14550669'  # variable for the athlete id
+results = []  # empty list to paste in results when iterating through 'results in data...' for loop
+for year in range(2012, 2023):  # for loop to extract only data from 2012-2022 (2023 is not included in range)
     payload = json.dumps({
       "operationName": "GetSingleCompetitorResultsDate",
       "variables": {
@@ -34,17 +33,15 @@ for year in range(2012, 2023):
       'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
       'x-amz-user-agent': 'aws-amplify/3.0.2',
       'x-api-key': 'da2-u2ciortsnrdxxcsr27sjqtx4qe'
-    }
+    }  # collapse headers with user information to provide world athletics server through API
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=headers, data=payload)  # use 'request' interpreter to concatenate above variables from API
     #print(response.text)
 
     data = response.json()
-    for result in data["data"]["getSingleCompetitorResultsDate"]["resultsByDate"]:
+    for result in data["data"]["getSingleCompetitorResultsDate"]["resultsByDate"]:  # goes down each key phrase in json
         results.append(result)
 
-res_data = pd.json_normalize(results)
+res_data = pd.json_normalize(results)  # convert json to structured dataframe columns
+res_data.insert(0, "id", ath_id, True)  # inserts athlete id into dataframe
 res_data.to_csv("Athlete-results.csv")
-
-
-
