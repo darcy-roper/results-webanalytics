@@ -5,8 +5,7 @@ import requests
 import json
 import pandas as pd
 
-url = "https://txhj5c3pafc57aflonu6rhxtxu.appsync-api.eu-west-1.amazonaws.com/graphql"
-
+url = "https://4m4ib67lebcubbrlrksmyac42i.appsync-api.eu-west-1.amazonaws.com/graphql"
 
 ath_id = ['14336705', '14455361', '14673644', '14456885', '14940604', '14436890', '14272002', '14407592',
           '14464527', '14565327', '14500488', '14271632', '14457807', '14411267', '14387190', '14271241',
@@ -16,7 +15,7 @@ ath_id = ['14336705', '14455361', '14673644', '14456885', '14940604', '14436890'
           '14622433', '14555113', '14764890', '14517181', '14448453', '14576384', '14517160', '14611740',
           '14732754', '14673646', '14636659', '14733182', '14615310', '14769938', '14731742', '14730127',
           '14787531', '14730464', '14769953', '14861366', '14609656', '14820122', '14691224', '14861747',
-          '14812564', '14636671', '14777855', '14774575', '14765468', '14814142', '14727709', '14328336',
+          '14812564', '14636671', '14777855', '14774575', '14765468', '14814142', '14727709', '14689526',
           '14865727', '14815270', '14859206', '14576087', '14861525', '14668498', '14730466', '14733176',
           '14519260', '14360445', '14496696', '14272435', '14411012', '14406120', '14336764', '14445318',
           '14689546', '14517594', '14731617', '14471777', '14608674', '14554575', '14179673', '14272049',
@@ -36,12 +35,12 @@ while True:
                   "variables": {
                     "resultsByYear": year,
                     "resultsByYearOrderBy": "date",
-                    "id": item
+                    "id": ath_id
                   },
                   "query": "query GetSingleCompetitorResultsDate($id: Int, $resultsByYearOrderBy: String, $resultsByYear: Int) {\n  getSingleCompetitorResultsDate(id: $id, resultsByYear: $resultsByYear, resultsByYearOrderBy: $resultsByYearOrderBy) {\n    parameters {\n      resultsByYear\n      resultsByYearOrderBy\n      __typename\n    }\n    activeYears\n    resultsByDate {\n      date\n      competition\n      venue\n      indoor\n      disciplineCode\n      disciplineNameUrlSlug\n      typeNameUrlSlug\n      discipline\n      country\n      category\n      race\n      place\n      mark\n      wind\n      notLegal\n      resultScore\n      remark\n      __typename\n    }\n    __typename\n  }\n}\n"
                 })
                 headers = {
-                  'authority': 'txhj5c3pafc57aflonu6rhxtxu.appsync-api.eu-west-1.amazonaws.com',
+                  'authority': '4m4ib67lebcubbrlrksmyac42i.appsync-api.eu-west-1.amazonaws.com',
                   'accept': '*/*',
                   'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
                   'content-type': 'application/json',
@@ -53,7 +52,7 @@ while True:
                   'sec-gpc': '1',
                   'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
                   'x-amz-user-agent': 'aws-amplify/3.0.2',
-                  'x-api-key': 'da2-u2ciortsnrdxxcsr27sjqtx4qe'
+                  'x-api-key': 'da2-lg5htrw3pjgevjrcgiw5a3enfu'
                 }  # collapse headers with user information to provide world athletics server through API
 
                 response = requests.request("POST", url, headers=headers, data=payload)  # use 'request' interpreter to concatenate above variables from API
@@ -64,7 +63,7 @@ while True:
                     #results.append(result)
                     res_data = pd.json_normalize(result)  # convert json to structured dataframe columns
                     res_data.insert(0, "id", item, True)  # inserts athlete id into dataframe at column 0
-                    res_data.to_csv("Athlete-results1.csv", mode='a', header=False, index=False)  # change csv file path to create new coppies
+                    res_data.to_csv("AlexRoberts.csv", mode='a', header=False, index=False)  # change csv file path to create new coppies
             except TypeError:
                 year = year + 1
 
