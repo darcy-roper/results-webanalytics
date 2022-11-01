@@ -6,6 +6,27 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
+
+asc_events = ['Javelin Throw', 'High Jump', 'Long Jump', 'Pole Vault', 'Triple Jump', 'Shot Put (5kg)',
+              'Discus Throw (1.500kg)', 'Javelin Throw (700g)', 'Decathlon Boys', '110m Hurdles (99.0cm)',
+              'Shot Put', 'Discus Throw', 'Decathlon', 'Shot Put (6kg)', 'Discus Throw (1.750kg)', 'Decathlon U20',
+              'Heptathlon', 'Hammer Throw (6kg)', 'Hammer Throw (5kg)', 'Shot Put (4kg)', 'Hammer Throw',
+              'Javelin Throw (500g)', 'Shot Put (3kg)', 'Heptathlon Girls', '35libs Weight', 'Javelin Throw (old)',
+              'Hammer Throw (3kg)']
+desc_events = ['8x100 Metres Relay', 'One Hour', '500 Metres', '10 Miles Road', 'Cross Country',
+               '400m hurdles (84.0cm)', 'Cross Country 4000m', '4x200 Metres Relay', 'Mixed Shuttle Hurdles Relay',
+               'Shuttle Hurdles Relay', '2000 Metres', '15 Kilometers Race Walk', 'U20 Race', '3000 Metres Steeplechase',
+               'Senior Race', 'Marathon', 'Two Miles', 'Mixed 2x2x400m Relay', '4x100 Metres Relay', '100 Yards',
+               '100 Metres Hurdles', '150 Metres', '300 Metres', '15 Kilometres', '12 Kilometres', '4x1500 Metres Relay',
+               '2000 Metres Steeplechase', '300 Metres Hurdles', '400 Metres Hurdles', '100m Hurdles (76.2cm)',
+               'Distance Medley Relay', '5 Kilometres', '800 Metres', '3000 Metres', '600 Metres', '4x800 Metres Relay',
+               'One Mile', '5000 Metres Race Walk', '20 Kilometres Race Walk', '10 Kilometres Race Walk',
+               '3000 Metres Race Walk', '5000 Metres', '10,000 Metres', 'Half Marathon', '10,000 Metres Race Walk',
+               '10 Kilometres', '30 Kilometres Race Walk', '50 Kilometres Race Walk', '5 Kilometres Race Walk',
+               '35 Kilometres Race Walk', '4x400 Metres Relay', '4x400 Metres Relay Mixed', '60 Metres', '1000 Metres',
+               '60 Metres Hurdles', '110 Metres Hurdles', '100 Metres', '110m Hurdles (91.4cm)', '200 Metres', '400 Metres', '1500 Metres'
+               ]
+
 # Heading:
 st.title("Web Analytics using Streamlit:")
 
@@ -17,7 +38,8 @@ dataframe_copy["date"] = pd.to_datetime(dataframe_copy["date"], infer_datetime_f
 group = dataframe_copy[['name', 'discipline']]
 ath_events = group.groupby('name')['discipline'].unique().reset_index()
 ath_events.set_index('name', inplace=True)
-dataframe_copy["discipline"] = dataframe_copy["discipline"].astype(str)
+#dataframe_copy["mark"] = dataframe_copy["mark"].astype(float)
+
 
 
 # Add a sidebar:
@@ -37,12 +59,16 @@ add_slider = st.sidebar.slider(
     2012, 2022, (2019, 2021))
 
 # Scatter plot
-fig = px.scatter(dataframe_copy[dataframe_copy.values == athlete_slt], x="date", y="mark", title=""+athlete_slt+"- results - true time axis",
+fig = px.scatter(dataframe_copy[dataframe_copy.values == athlete_slt], x="date", y="mark", color="discipline", symbol="discipline", title=""+athlete_slt+"- results - true time axis",
              hover_data=['competition', 'country'])
-fig.update_yaxes(categoryorder='category ascending')
-fig.update_yaxes(tickformat="d")
+#fig.update_yaxes(tickformat="p")
 # Update axes
 fig.update_layout(xaxis=dict(autorange=True, rangeslider=dict(autorange=True), type="date"))
+if event in asc_events:
+    fig.update_yaxes(categoryorder='min ascending')
+elif event in desc_events:
+    fig.update_yaxes(categoryorder='max ascending')
+
 st.write(fig)
 st.write("Click and drag the ends of the slider to view different date ranges!")
 

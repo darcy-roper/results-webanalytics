@@ -10,5 +10,7 @@ ath_events.set_index('name', inplace=True)
 
 # for item in ath_events.loc['Darcy Roper']:
 #     print(item)
-print(ath_events.loc['Darcy Roper'])
+#print(ath_events.loc['Darcy Roper'])
 
+all_ev = dataframe_copy['discipline'].unique()
+print(all_ev)
