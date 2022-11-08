@@ -63,7 +63,7 @@ while True:
                     #results.append(result)
                     res_data = pd.json_normalize(result)  # convert json to structured dataframe columns
                     res_data.insert(0, "id", item, True)  # inserts athlete id into dataframe at column 0
-                    res_data.to_csv("AlexRoberts.csv", mode='a', header=False, index=False)  # change csv file path to create new coppies
+                    res_data.to_csv("NewestathsDF.csv", mode='a', header=False, index=False)  # change csv file path to create new coppies
             except TypeError:
                 year = year + 1
 
