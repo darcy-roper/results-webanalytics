@@ -15,8 +15,8 @@ walks_ev = ["10000-meters-race-walk", "20-kilometres-race-walk"]
 relays_ev = ["4x100-metres-relay"]
 
 sex = "men"
-group = "sprints"
-event = "400-meters"
+group = "sprints"  # this should be a variable which iterates through the event_group options
+event = "400-meters"  # should iterate through events based on event group
 ctry = "aus"
 
 
