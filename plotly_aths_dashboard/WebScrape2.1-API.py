@@ -1,13 +1,32 @@
 # Using hidden API to obtain results data
 # Create variables such as Year and athlete ID to iterate through athletes
+import csv
 
 import requests
 import json
 import pandas as pd
 
+# create an empty csv with headers to append athlete data into
+df = pd.DataFrame({'id': [], 'date': [], 'competition': [], 'venue': [], 'indoor': [], 'disciplineCode': [], 'disciplineNameUrlSlug': [], 'typeNameUrlSlug': [], 'discipline': [], 'country': [], 'category': [], 'race': [], 'place': [], 'mark': [], 'wind': [], 'notlegal': [], 'resultscore': [], 'remark': [], '__typename': []})
+df.to_csv('somethingNew.csv', mode='w', index=False, sep='|')
+
 url = 'https://2mlp5vgc7ffwlb763jx7yrizqu.appsync-api.eu-west-1.amazonaws.com/graphql'
 
-ath_id = ['14336705', '14455361']
+ath_id = ['14336705', '14455361', '14673644', '14456885', '14940604', '14436890', '14272002', '14407592',
+          '14464527', '14565327', '14500488', '14271632', '14457807', '14411267', '14387190', '14271241',
+          '14463325', '14575440', '14455195', '14613323', '14490253', '14446988', '14617484', '14667553',
+          '14464506', '14550669', '14433154', '14619618', '14436876', '14765461', '14271807', '14831970',
+          '14514627', '14411273', '14768392', '14517121', '14634207', '14636668', '14674731', '14761633',
+          '14622433', '14555113', '14764890', '14517181', '14448453', '14576384', '14517160', '14611740',
+          '14732754', '14673646', '14636659', '14733182', '14615310', '14769938', '14731742', '14730127',
+          '14787531', '14730464', '14769953', '14861366', '14609656', '14820122', '14691224', '14861747',
+          '14812564', '14636671', '14777855', '14774575', '14765468', '14814142', '14727709', '14689526',
+          '14865727', '14815270', '14859206', '14576087', '14861525', '14668498', '14730466', '14733176',
+          '14519260', '14360445', '14496696', '14272435', '14411012', '14406120', '14336764', '14445318',
+          '14689546', '14517594', '14731617', '14471777', '14608674', '14554575', '14179673', '14272049',
+          '14533629', '14549778', '14553618', '14384288', '14495639', '14514622', '14411163', '14924344',
+          '14496066', '14552175', '14271509', '14517173', '14727680', '14336706', '14370966', '14386314',
+          '14336656', '14668477', '14271094', '14271451', '14496063']
 # variable containing all 2021 NASS athletes on AA website
 
 
@@ -62,19 +81,17 @@ while True:
 
                 response = requests.request("POST", url, headers=headers, data=payload)  # use 'request' interpreter to concatenate above variables from API
                 print(response.text)  # tracks progress in terminal
-
                 data = response.json()
+
                 for result in data["data"]["getSingleCompetitorResultsDate"]["resultsByDate"]:  # goes down each key phrase in json
                     #results.append(result)
                     res_data = pd.json_normalize(result)  # convert json to structured dataframe columns
                     res_data.insert(0, "id", item, True)  # inserts athlete id into dataframe at column 0
-                    res_data.to_csv("/Users/newmac/PycharmProjects/results-webanalytics/plotly_aths_dashboard/DF_Headers.csv",
-                                    mode='w',
-                                    headers=True,
-                                    # columns=['id', 'date', 'competition', 'venue', 'indoor', 'disciplineCode', 'disciplineNameUrlSlug', 'typeNameUrlSlug', 'discipline', 'country', 'category', 'race', 'place', 'mark', 'wind', 'notlegal', 'resultscore', 'remark', '__typename'],
-                                    # header=['id', 'date', 'competition', 'venue', 'indoor', 'disciplineCode', 'disciplineNameUrlSlug', 'typeNameUrlSlug', 'discipline', 'country', 'category', 'race', 'place', 'mark', 'wind', 'notlegal', 'resultscore', 'remark', '__typename'],
-                                    index=False)  # change csv file path to create new copy
+                    res_data.to_csv("somethingNew.csv", mode='a', index=False, header=False, sep='|')  # change csv file path to create new copy
             except TypeError:
                 year = year + 1
 
     break
+
+pandas_file = pd.read_csv('somethingNew.csv', sep='|')
+print(pandas_file)
