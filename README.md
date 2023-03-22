@@ -1,8 +1,8 @@
 # results-webanalytics
-This repo contains an API based graphQL webscraping bot named `WebScrape3.0-API.py`, along with short code programs calling on `Plotly` analytics for athletics related results for Australia's top NASS athletes
+This repo contains an API based graphQL webscraping bot named `WebScrape2.0-API.py`, along with short code programs calling on `Plotly` analytics for athletics related results for Australia's top NASS athletes
 
 # Objectives
-  - [ ] **Update** - `WebScrape3.0-API.py` to write data to SQL db. The program currently writes to csv files
+  - [ ] **Update** - `WebScrape2.0-API.py` to write data to SQL db. The program currently writes to csv files
   - **_Purpose_**: Ease of deployment on a network/server - uploading csv's to server is inefficient
   - [ ] **Gather** - new list of Australia Athlete Names/ ID's to scrape for. The program is currently only scrapping for 2022 NASS listed Athletes. 
   - **_Idea_**: We can generate a new list of names/ID's from a new program which orders Toplists using filters for country=Aus (at the end of a season). Otherwise the Athletes in scope could remain limited for exclusivity?
