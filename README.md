@@ -1,5 +1,5 @@
 # results-webanalytics
-This repo contains an API based graphQL webscraping bot named `WebScrape2.1-API.py`, along with short code programs calling on `Plotly` analytics for athletics related results for Australia's top NASS athletes
+This repo contains an API based graphQL webscraping bot named `WebScrape2.1-API.py`, along with short code programs calling on `Plotly` analytics for athletics related results for Australia's 2022 NASS listed athletes. (I hope to expand this population scope in future)
 The plotly app file is named `Trial_app.py`
 The key csv file containing all scraped data is `somethingNew.csv`
 To successfully run the app ensure the csv file is in the same folder location as the app.py file. 
