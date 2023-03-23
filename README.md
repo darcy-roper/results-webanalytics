@@ -11,8 +11,9 @@ To successfully run the app ensure the csv file is in the same folder location a
   - **_Idea_**: We can generate a new list of names/ID's from a new program which orders Toplists using filters for country=Aus (at the end of a season). Otherwise the Athletes in scope could remain limited for exclusivity?
   >I'd rather make it open to as many athletes as possible. Though, this could be problematic for server storage in the long-run
   - [X] **Decide** - on which data visualisation platform we'll use for the project. [**Plotly**, Google Charts, Tableau, something else?]
-  - **Dashboard general structure**: ![image 64](https://user-images.githubusercontent.com/85177676/226784786-db221e25-9018-4bea-af66-ecd7560909d8.png)
   - **Dashboard progress in Plotly**: ![image](https://user-images.githubusercontent.com/85177676/227387035-87f345c3-e353-41f6-868f-6596ba47b632.png)
+  - **Dashboard inspiration structure in Power BI**: ![image 64](https://user-images.githubusercontent.com/85177676/226784786-db221e25-9018-4bea-af66-ecd7560909d8.png)
+  
 
 
 # To do:
