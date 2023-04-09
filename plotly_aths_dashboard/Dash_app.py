@@ -5,7 +5,9 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 
-df = pd.read_csv('somethingNew.csv', sep='|')
+noname_df = pd.read_csv('somethingNew.csv', sep='|')
+name_ids = pd.read_csv('NASS list (20-21).csv', sep=',')
+df = pd.merge(noname_df, name_ids, on='id')  # Merged df with name column
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
 
@@ -17,8 +19,13 @@ mapgraph = dcc.Graph(id='mapgraph', figure={})
 sngraph = dcc.Graph(id='sngraph', figure={})
 placegraph = dcc.Graph(id='placegraph', figure={})
 cat_placing = dcc.Graph(id='piegraph_placing', figure={})
-dropdown = dcc.Dropdown(options=[{'label': i, 'value': i} for i in df['id'].unique()],
-                        value='14550669',  # initial value displayed when page first loads
+
+# format unique dropdown options
+unique_names = df['name'].unique()  # unique values from name column
+# create dropdown options using unique names
+dropdown_options = [{'label': name, 'value': id} for id, name in zip(df['id'].unique(), unique_names)]
+dropdown = dcc.Dropdown(options=dropdown_options,
+                        value='14336705',  # initial value displayed when page first loads
                         clearable=False, style={'color': 'Black'}, searchable=True)
 event_select = dcc.Dropdown(
     id='event_sel',
@@ -31,6 +38,7 @@ event_select = dcc.Dropdown(
 # Add the "select-all" option to the options list
 options = [{'label': i, 'value': i} for i in df['category'].dropna().unique()]
 options.append({'label': 'Select All', 'value': 'select-all'})
+options = sorted(options, key=lambda x: x['label'])  # sort options in alphabetical order
 # Get all available category options
 category_options = [option['value'] for option in options if option['value'] != 'select-all']
 catradio = dbc.Checklist(
@@ -141,7 +149,7 @@ def update_all_graphs(user_input, event_select1):
     hovertemp1 = "<b>Category: </b> %{label} <br>"
     hovertemp1 += "<b>Number of appearances: </b> %{value}"
     dfa1 = dfa.groupby(['place', 'category']).size().reset_index(name='number_of_placings')  # apply grouping to count number of comp appearances
-    fig4 = px.pie(dfa1, values='number_of_placings', names='category', title='Competition appearances by Category',
+    fig4 = px.pie(dfa1, values='number_of_placings', names='category', title='Competition appearances by meet category',
                   color='category', color_discrete_map={'A': 'gold', 'B': 'silver', 'C': 'saddlebrown'})
     fig4.update_traces(hovertemplate=hovertemp1)
 
@@ -170,16 +178,16 @@ def update_pie_graph(catradio_value, dropdown_value, event_sel_value):
         return {}
 
     if not event_sel_value:
-        filtered_data = df.loc[(df['id'] == dropdown_value) & (df['category'].isin(catradio_value))]
+        filtered_data = df.loc[(df['id'] == dropdown_value) & (df['category'].isin(catradio_value)) & (df['race'] == 'F')]
     else:
         if isinstance(event_sel_value, str):
             event_sel_value = [event_sel_value]
-        filtered_data = df.loc[(df['id'] == dropdown_value) & (df['category'].isin(catradio_value)) & (df['discipline'].isin(event_sel_value))]
+        filtered_data = df.loc[(df['id'] == dropdown_value) & (df['category'].isin(catradio_value)) & (df['discipline'].isin(event_sel_value)) & (df['race'] == 'F')]
 
     filtered_data1 = filtered_data.groupby(['place', 'category']).size().reset_index(name='number_of_placings')
     fig5 = px.pie(filtered_data1, values='number_of_placings', names='place', color='place',
                   color_discrete_sequence=px.colors.sequential.algae, color_discrete_map={'1.': 'gold', '2.': 'silver', '3.': 'saddlebrown'})
-    fig5.update_layout(title="Placing by category selection(s)")
+    fig5.update_layout(title="Placing by category (Finals only)")
     return fig5
 
 # Run app
