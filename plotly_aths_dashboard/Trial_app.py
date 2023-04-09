@@ -24,7 +24,11 @@ dropdown = dcc.Dropdown(options=df['id'].unique(),
                         clearable=False, style={'color': 'Black'},
                         searchable=True)
 
-button = html.Button("Reset Graph!")
+event_select = dcc.Dropdown(id='event_sel',
+                            options=[],
+                            style={'color': 'Black'},
+                            multi=True)
+
 
 # Customize Layout
 app.layout = dbc.Container([
@@ -32,16 +36,12 @@ app.layout = dbc.Container([
         dbc.Col([mytitle], width=6)
     ], justify='center'),
     dbc.Row([
-        dbc.Col([dropdown], width=6)
-    ], justify='center'),
+        dbc.Col([dropdown], width=6),
+        dbc.Col([event_select], width=6),
+    ]),
     dbc.Row([
         dbc.Col([mygraph], width=6),
         dbc.Col([sngraph], width=6)
-    ]),
-    dbc.Row([
-        html.Div([
-            html.Button('Reset Pie Graph', id='btn-nclicks-1', n_clicks=0),  # the input
-            html.Div(id='button1')])  # the output
     ]),
     dbc.Row([
         dbc.Col([piegraph_placing], width=4),
@@ -54,28 +54,43 @@ app.layout = dbc.Container([
 
 ], fluid=True)
 
-##########################################################
-# Callback allows components to interact
+#####_____________multi dropdown callbacks____________####
+@app.callback(
+    Output(component_id='event_sel', component_property='options'),
+    Input(dropdown, component_property='value'))
+def get_event_options(user_input):
+    df0 = df[df['id'] == user_input]
+    return [{'label': i, 'value': i} for i in df0['discipline'].unique()]
+
+@app.callback(
+    Output(component_id='event_sel', component_property='value'),
+    Input(component_id='event_sel', component_property='options'))
+def get_event_value(event_sel):  # function arguments come from the component property of the Input
+    return [k['value'] for k in event_sel][1]
+
+
+#####__________________________________________________####
 @app.callback(
     Output(component_id='mygraph', component_property='figure'),
-    Input(dropdown, component_property='value')
-)
-def update_graph(user_input):  # function arguments come from the component property of the Input
-    #print(user_input)
-    #print(df[df['id']==user_input])
-    fig = px.scatter(df[df['id']==user_input], x="date", y="resultscore",
-                     color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
+    Input(dropdown, component_property='value'),
+    Input(event_select, component_property='value'))
+def update_graph(user_input, event_select1):
+    if not event_select1:
+        filtered_data = df.loc[df['id'] == user_input]
+    else:
+        filtered_data = df.loc[(df['id'] == user_input) & (df['discipline'].isin(event_select1))]
+    fig = px.scatter(filtered_data, x="date", y="resultscore",
+                     color="discipline", hover_data=["category", "place", "mark", "wind"],
                      title="Event Results - Hover for more data!")
     fig.update_layout(legend_title_text='')
-    return fig  # returned objects are assigned to the component property of the Output
+    return fig
 
 
 @app.callback(
     Output(component_id='sngraph', component_property='figure'),
-    Input(dropdown, component_property='value')
-)
+    Input(dropdown, component_property='value'))
 def update_sngraph(user_input):
-    dfb = df[df['id']==user_input]  # data we're working with is all rows related to 'user_input'
+    dfb = df[df['id'] == user_input]  # data we're working with is all rows related to 'user_input'
     # add column for season
     dfb['season'] = dfb['date'].dt.strftime('%Y')
     dfb['season'] = dfb['season'].astype(int)  # change the data type so x axis is continuous
@@ -94,7 +109,7 @@ def update_sngraph(user_input):
 )
 def update_mapgraph(user_input):  # function arguments come from the component property of the Input
     #print(user_input)
-    dff = df[df['id']==user_input]
+    dff = df[df['id'] == user_input]
     dff['count'] = dff.groupby(['country'])['__typename'].transform('count')
     fig2 = px.scatter_geo(dff, locations="country", color="country",
                           size='count', projection="orthographic",
@@ -110,11 +125,13 @@ def update_mapgraph(user_input):  # function arguments come from the component p
     Input(dropdown, component_property='value')
 )
 def update_placegraph(user_input):  # function arguments come from the component property of the Input
-    #print(user_input)
-    dfa = df[df['id']==user_input]
+    dfa = df[df['id'] == user_input]
     #dfa['num_place'] = dfa.groupby(['category', 'place'])['place'].transform('count')
+    hovertemp1 = "<b>Category: </b> %{label} <br>"  # format the hover labels
+    hovertemp1 += "<b>Number of placings: </b> %{value}"  # format hover labels
     fig4 = px.pie(dfa, values='place', names='category', title='Competitions by Category - Click on different sections of the pie!',
                   color='category', color_discrete_map={'A': 'gold', 'B': 'silver', 'C': 'saddlebrown'})
+    fig4.update_traces(hovertemplate=hovertemp1)
 
     return fig4  # returned objects are assigned to the component property of the Output
 
@@ -127,35 +144,22 @@ def update_placegraph(user_input):  # function arguments come from the component
 )
 def update_side_graph(clickData, user_input):
     if clickData is None:
-        dff2 = df[df['id']==user_input]
+        dff2 = df[df['id'] == user_input]
         abc = dff2.groupby(['place', 'category']).size().reset_index(name='number_of_placings')
         fig5 = px.pie(abc, values='number_of_placings', names='place', title='Placing at all Competitions',
                       color='place', color_discrete_sequence=px.colors.sequential.algae, color_discrete_map={'1.': 'gold', '2.': 'silver', '3.': 'saddlebrown'})
         return fig5
     else:
         print(f'clicked data: {clickData}')
-        dff2 = df[df['id']==user_input]
+        dff2 = df[df['id'] == user_input]
         abc = dff2.groupby(['place', 'category']).size().reset_index(name='number_of_placings')
         abc['number_of_placings'] = abc['number_of_placings'].astype(int)
         clk_category = clickData['points'][0]['label']
-        abc = abc[abc['category']==clk_category]
+        abc = abc[abc['category'] == clk_category]
         fig5 = px.pie(abc, values='number_of_placings', names='place', title=f'Placing distribution at {clk_category} meets',
                       color='place', color_discrete_sequence=px.colors.sequential.algae, color_discrete_map={'1.': 'gold', '2.': 'silver', '3.': 'saddlebrown'})
 
         return fig5
-
-
-# callback for button
-@app.callback(
-    Output(component_id='button1', component_property='children'), # button
-    Input(component_id='btn-nclicks-1', component_property='n_clicks'), # button
-)
-def update_button_state(btn1): # function arguments come from the component property of the Input (should be n_clicks but not called that
-    print(btn1)
-    btn_val = "None of the buttons have been clicked yet"
-    if "btn-nclicks-1" == ctx.triggered_id:
-        btn_val = "Button 1 was most recently clicked"
-    return html.Div(btn_val)
 
 
 # Run app
