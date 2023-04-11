@@ -19,6 +19,8 @@ mapgraph = dcc.Graph(id='mapgraph', figure={})
 sngraph = dcc.Graph(id='sngraph', figure={})
 placegraph = dcc.Graph(id='placegraph', figure={})
 piegraph_placing = dcc.Graph(id='piegraph_placing', figure={})
+year_prog_graph = dcc.Graph(id='year_prog_graph', figure={})
+
 dropdown = dcc.Dropdown(options=df['id'].unique(),
                         value='14550669',  # initial value displayed when page first loads
                         clearable=False, style={'color': 'Black'},
@@ -28,7 +30,6 @@ event_select = dcc.Dropdown(id='event_sel',
                             options=[],
                             style={'color': 'Black'},
                             multi=True)
-
 
 # Customize Layout
 app.layout = dbc.Container([
@@ -85,6 +86,24 @@ def update_graph(user_input, event_select1):
     fig.update_layout(legend_title_text='')
     return fig
 
+#filtering the season to add traces for season trendlines
+@app.callback(
+    Output(component_id='year_prog_graph', component_property='figure'),
+    Input(dropdown, component_property='value'),
+    Input(event_select, component_property='value'))
+def update_trend_graph(user_input, event_select1):
+    if not event_select1:
+        filtered_data = df.loc[df['id'] == user_input]
+    else:
+        filtered_data = df.loc[(df['id'] == user_input) & (df['discipline'].isin(event_select1))]
+    filtered_data['year'] = filtered_data['date'].dt.strftime('%Y')
+    filtered_data['year'] = filtered_data['year'].astype(int)
+    fig6 = px.scatter(filtered_data, x="year", y="resultscore",
+                      color="discipline", hover_data=["category", "place", "mark", "wind"],
+                      trendline="ols", facet_col="year",
+                      title="Season Rates of progression")
+    fig6.update_layout(legend_title_text='')
+    return fig6
 
 @app.callback(
     Output(component_id='sngraph', component_property='figure'),
