@@ -1,79 +1,334 @@
-# Streamlit dashboard
-# to run streamlit package first call - pipenv shell
-# followed by - streamlit run *full file path*
+# this app is used to comparing two athletes in the same event
+# this will be used in a multi-page app to show comparisons on a new page
+# a navigation pane is yet to be built to link the two pages****
 
+import dash
+from dash import dcc, Dash, dash_table, html
+from dash.dependencies import Output, Input
+import dash_bootstrap_components as dbc
 import pandas as pd
-import streamlit as st
 import plotly.express as px
+from plotly import graph_objects as go
+from plotly.subplots import make_subplots
 
 
-asc_events = ['Javelin Throw', 'High Jump', 'Long Jump', 'Pole Vault', 'Triple Jump', 'Shot Put (5kg)',
-              'Discus Throw (1.500kg)', 'Javelin Throw (700g)', 'Decathlon Boys', '110m Hurdles (99.0cm)',
-              'Shot Put', 'Discus Throw', 'Decathlon', 'Shot Put (6kg)', 'Discus Throw (1.750kg)', 'Decathlon U20',
-              'Heptathlon', 'Hammer Throw (6kg)', 'Hammer Throw (5kg)', 'Shot Put (4kg)', 'Hammer Throw',
-              'Javelin Throw (500g)', 'Shot Put (3kg)', 'Heptathlon Girls', '35libs Weight', 'Javelin Throw (old)',
-              'Hammer Throw (3kg)']
-desc_events = ['8x100 Metres Relay', 'One Hour', '500 Metres', '10 Miles Road', 'Cross Country',
-               '400m hurdles (84.0cm)', 'Cross Country 4000m', '4x200 Metres Relay', 'Mixed Shuttle Hurdles Relay',
-               'Shuttle Hurdles Relay', '2000 Metres', '15 Kilometers Race Walk', 'U20 Race', '3000 Metres Steeplechase',
-               'Senior Race', 'Marathon', 'Two Miles', 'Mixed 2x2x400m Relay', '4x100 Metres Relay', '100 Yards',
-               '100 Metres Hurdles', '150 Metres', '300 Metres', '15 Kilometres', '12 Kilometres', '4x1500 Metres Relay',
-               '2000 Metres Steeplechase', '300 Metres Hurdles', '400 Metres Hurdles', '100m Hurdles (76.2cm)',
-               'Distance Medley Relay', '5 Kilometres', '800 Metres', '3000 Metres', '600 Metres', '4x800 Metres Relay',
-               'One Mile', '5000 Metres Race Walk', '20 Kilometres Race Walk', '10 Kilometres Race Walk',
-               '3000 Metres Race Walk', '5000 Metres', '10,000 Metres', 'Half Marathon', '10,000 Metres Race Walk',
-               '10 Kilometres', '30 Kilometres Race Walk', '50 Kilometres Race Walk', '5 Kilometres Race Walk',
-               '35 Kilometres Race Walk', '4x400 Metres Relay', '4x400 Metres Relay Mixed', '60 Metres', '1000 Metres',
-               '60 Metres Hurdles', '110 Metres Hurdles', '100 Metres', '110m Hurdles (91.4cm)', '200 Metres', '400 Metres', '1500 Metres'
-               ]
-
-# Heading:
-st.title("Web Analytics using Streamlit:")
-
-# Filter the data:
-dataframe = pd.read_csv("/Users/newmac/PycharmProjects/results-webanalytics/plotly_aths_dashboard/Athlete-results_cleaned data.csv")
-dataframe_copy = dataframe.copy()
-uniq_names = dataframe_copy['name'].unique()  # filters the athlete names to show options
-dataframe_copy["date"] = pd.to_datetime(dataframe_copy["date"], infer_datetime_format=True)  # converts the dates from txt to real dates
-group = dataframe_copy[['name', 'discipline']]
-ath_events = group.groupby('name')['discipline'].unique().reset_index()
-ath_events.set_index('name', inplace=True)
-#dataframe_copy["mark"] = dataframe_copy["mark"].astype(str)
+df = pd.read_csv('Dataframe_Analysis.csv', sep='|')  # updated csv following statistical calcs in 'join_csv.py'
+dff = pd.read_csv('Datasets/WC22_Results.csv', sep=',')  # result data from Oregon WC 2022
+df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
 
+# Figure components
+app = Dash(__name__, external_stylesheets=[dbc.themes.QUARTZ])
+mytitle = dcc.Markdown(children='# Australian Athletics Analytics')
+mygraph = dcc.Graph(id='mygraph', figure={})
+mapgraph = dcc.Graph(id='mapgraph', figure={})
+sngraph = dcc.Graph(id='sngraph', figure={})
+placegraph = dcc.Graph(id='placegraph', figure={})
+cat_placing = dcc.Graph(id='graph_placing', figure={})
+year_prog_graph = dcc.Graph(id='year_prog_graph', figure={})
 
-# Add a sidebar:
-# adding "select" as the first and default choice
-athlete_slt = st.sidebar.selectbox('Select athlete', options=['Select or search an Athlete']+list(ath_events.index))
-# display selectbox 2 if manufacturer is not "select"
-if athlete_slt != 'Select or search an Athlete':
-    for item in ath_events.loc[athlete_slt]:
-        event = st.sidebar.selectbox('Select event', options=item)
-    st.sidebar.write('You selected ' + athlete_slt + ' ' + event)
+
+# format unique dropdown options
+unique_names = df['name'].unique()  # unique values from name column
+# create dropdown options using unique names
+dropdown_options = [{'label': name, 'value': id} for id, name in zip(df['id'].unique(), unique_names)]
+dropdown = dcc.Dropdown(options=dropdown_options,
+                        value='14336705',  # initial value displayed when page first loads
+                        clearable=False, style={'color': 'Black'}, searchable=True)
+select_athlete_2 = dcc.Dropdown(id='athlete_2', options=dropdown_options,
+                                clearable=True, style={'color': 'Black'}, searchable=True)
+
+event_select = dcc.Dropdown(
+    id='event_sel',
+    options=[{'label': i, 'value': i} for i in df['discipline'].unique()],
+    value=[],
+    multi=True,
+    style={'color': 'Black'})
+
+# Creating & formatting options for the checklist of competition categories
+# Add the "select-all" option to the options list
+options = [{'label': i, 'value': i} for i in df['category'].dropna().unique()]
+options.append({'label': 'Select All', 'value': 'select-all'})
+options.append({'label': 'Deselect All', 'value': 'deselect-all'})
+options = [{'label': 'F', 'value': 'F', 'order': 1},
+           {'label': 'E', 'value': 'E', 'order': 2},
+           {'label': 'D', 'value': 'D', 'order': 3},
+           {'label': 'C', 'value': 'C', 'order': 4},
+           {'label': 'B', 'value': 'B', 'order': 5},
+           {'label': 'A', 'value': 'A', 'order': 6},
+           {'label': 'GL', 'value': 'GL', 'order': 7},
+           {'label': 'GW', 'value': 'GW', 'order': 8},
+           {'label': 'DF', 'value': 'DF', 'order': 9},
+           {'label': 'OW', 'value': 'OW', 'order': 10},
+           {'label': 'Select All', 'value': 'select-all', 'order': 11},
+           {'label': 'Deselect All', 'value': 'deselect-all', 'order': 12}]  # orders the options according to the list
+options = sorted(options, key=lambda x: x['order'])
+# Get all available category options
+category_options = [option['value'] for option in options if option['value'] not in ['select-all', 'deselect-all']]
+catradio = dbc.Checklist(
+    id='catradio',
+    options=options,
+    value=category_options,
+    inline=True,
+    labelStyle={'display': 'inline-block', 'margin-right': '10px'})
 
 
-# Add a slider to the sidebar:
-add_slider = st.sidebar.slider(
-    'Select a time period to analyse',
-    2012, 2022, (2019, 2021))
+# Creating a dbc.Card for catradio and cat_placing
+cat_card = dbc.Card(
+    [
+        dbc.CardBody(
+            [
+                dbc.Row([
+                    dbc.Col([catradio], width=12),
+                ]),
+                dbc.Row([
+                    dbc.Col([cat_placing], width=12)
+                ]),
+            ]
+        ),
+    ],
+)
 
-# Scatter plot
-plot_df = dataframe_copy[(dataframe_copy['name'].str.contains(athlete_slt)) & (dataframe_copy['discipline'].str.contains(event))]
-if event in asc_events:
-    plot_df["mark"] = plot_df["mark"].astype(float)
-elif event in desc_events:
-    plot_df["mark"] = plot_df["mark"].astype(str)
-fig = px.scatter(plot_df
-                 , x="date", y="mark", color='discipline', symbol='discipline', title=""+athlete_slt+"- results - true time axis",
-                 hover_data=['competition', 'country'])
+# Customize Layout
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col([mytitle], width=12)
+    ], justify='center'),
+    dbc.Row([
+        dbc.Col([
+            dropdown,
+            event_select,
+            select_athlete_2,
+            #key_stats_card,
+        ], width=3),
+        dbc.Col([
+            dbc.Row([
+                dbc.Col([mygraph], width=12),
+            ], justify='end'),
+            dbc.Row([
+                dbc.Col([sngraph], width=12),
+            ], justify='end'),
+            dbc.Row([
+                dbc.Col([mapgraph], width=6),
+                dbc.Col([placegraph], width=6)
+            ], justify='end'),
+            dbc.Row([
+                dbc.Col([cat_card], width=12),
+            ], justify='end'),
+            dbc.Row([
+                dbc.Col([year_prog_graph], width=12),
+            ], justify='end'),
+        ], width=9),
+    ]),
+], fluid=True)
 
-# Update axes
-fig.update_layout(xaxis=dict(autorange=True, rangeslider=dict(autorange=True), type="date"))
-if event in asc_events:
-    fig.update_yaxes(categoryorder='min ascending')
-elif event in desc_events:
-    #fig.update_layout(categoryorder='min descending')
-    fig.update_layout(autotypenumbers='convert types')
-st.write(fig)
-st.write("Click and drag the ends of the slider to view different date ranges!")
+# Callbacks for handling both inputs from the user
+@app.callback(
+    Output(component_id='event_sel', component_property='options'),
+    Input(dropdown, component_property='value'))
+def get_event_options(user_input):
+    df0 = df[df['id'] == user_input]
+    return [{'label': i, 'value': i} for i in df0['discipline'].unique()]
 
+@app.callback(
+    Output(component_id='event_sel', component_property='value'),
+    Input(component_id='event_sel', component_property='options'))
+def get_event_value(event_sel):
+    if event_sel:
+        values = [k['value'] for k in event_sel]
+        counts = {value: values.count(value) for value in values}
+        default_value = max(counts, key=counts.get)
+        return default_value
+
+# Update all main graphs (except for the pie graphs for placing)
+@app.callback(
+    [Output(component_id='mygraph', component_property='figure'),
+     Output(component_id='sngraph', component_property='figure'),
+     Output(component_id='mapgraph', component_property='figure'),
+     Output(component_id='placegraph', component_property='figure'),
+     Output(component_id='year_prog_graph', component_property='figure')],
+    [Input(dropdown, component_property='value'),
+     Input('event_sel', 'value'),
+     Input(select_athlete_2, component_property='value')]
+)
+def update_all_graphs(user_input, event_select1, user_input_2):
+    if not user_input_2:
+        filtered_data = df.loc[df['id'] == user_input]
+        filtered_data_2 = None  # Filter data for the second athlete
+        fig = px.scatter(filtered_data, x="date", y="resultscore",
+                         color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
+                         title="Event Results - Hover for more information!")
+        fig.update_layout(legend_title_text='')
+
+        # update sngraph for a single athlete
+        dfb = filtered_data.copy()
+        dfb['season'] = dfb['date'].dt.strftime('%Y')
+        dfb['season'] = dfb['season'].astype(int)
+        dfb['sn_best'] = dfb.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
+        fig3 = px.line(dfb, x="season", y="sn_best", color="disciplineCode", markers=True,
+                       title="Season's bests")
+        fig3.update_layout(legend_title_text='')
+
+    else:
+        if isinstance(event_select1, str):
+            event_select1 = [event_select1]
+        filtered_data = df.loc[(df['id'] == user_input) & (df['discipline'].isin(event_select1))]
+        filtered_data_2 = df.loc[(df['id'] == user_input_2) & (df['discipline'].isin(event_select1))]  # Filter data for the second athlete
+
+        # update mygraph for two athletes
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.add_trace(
+            go.Scatter(
+                x=filtered_data['date'],
+                y=filtered_data['resultscore'],
+                mode='markers',
+                marker=dict(color='blue'),  # Color for athlete 1
+                hovertext=filtered_data[['category', 'place', 'mark', 'wind']],
+                name=df.loc[df['id'] == user_input, 'name'].iloc[0]), secondary_y=False)
+        if filtered_data_2 is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_data_2['date'],
+                    y=filtered_data_2['resultscore'],
+                    mode='markers',
+                    marker=dict(color='red'),  # Color for athlete 2
+                    hovertext=filtered_data_2[['category', 'place', 'mark', 'wind']],
+                    name=df.loc[df['id'] == user_input_2, 'name'].iloc[0]), secondary_y=False)
+        fig.update_layout(
+            title="Event Results - Hover for more information!",
+            legend_title_text='')
+
+        # update sngraph for two athletes
+        dfb = filtered_data.copy()
+        dfb['season'] = dfb['date'].dt.strftime('%Y')
+        dfb['season'] = dfb['season'].astype(int)
+        dfb['sn_best'] = dfb.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
+        fig3 = go.Figure()
+        fig3.add_trace(go.Scatter(x=dfb['season'], y=dfb['sn_best'], name=df.loc[df['id'] == user_input, 'name'].iloc[0]))
+        if filtered_data_2 is not None:
+            dfb1 = filtered_data_2.copy()
+            dfb1['season'] = dfb1['date'].dt.strftime('%Y')
+            dfb1['season'] = dfb1['season'].astype(int)
+            dfb1['sn_best'] = dfb1.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
+            fig3.add_trace(go.Scatter(x=dfb1['season'], y=dfb1['sn_best'], name=df.loc[df['id'] == user_input_2, 'name'].iloc[0]))
+        fig3.update_layout(title="Season's bests", legend_title_text='')
+
+
+    # trends in each year
+    dfc = filtered_data.copy()
+    dfc['year'] = dfc['date'].dt.strftime('%Y')
+    dfc['year'] = dfc['year'].astype(int)
+    fig6 = px.scatter(dfc, x="date", y="resultscore",
+                  color="discipline", hover_data=["category", "place", "mark", "wind"],
+                  title="Season rates of progression")
+    # Add trend lines for each year
+    for year in dfc['year'].unique():
+        group = dfc[dfc['year'] == year]
+        trendline_ols = px.scatter(group, x="date", y="resultscore", trendline="ols").data[1]
+        trendline_ols['line']['color'] = 'red'  # Set color of trendline_ols to red
+        trendline_lowess = px.scatter(group, x="date", y="resultscore", trendline="lowess").data[1]
+        trendline_lowess['line']['color'] = 'blue'  # Set color of trendline_lowess to blue
+        fig6.add_trace(trendline_ols)
+        fig6.add_trace(trendline_lowess)
+    fig6.update_layout(legend_title_text='')
+
+    # update mapgraph
+    dff = filtered_data.copy()
+    dff['count'] = dff.groupby(['country'])['__typename'].transform('count')
+    fig2 = px.scatter_geo(dff, locations="country", color="country",
+                          size='count', projection="orthographic",
+                          title='Competition Travel Footprint')
+    fig2.update_traces(marker=dict(line=dict(width=2, color='Blue')), selector=dict(mode='markers'))
+    fig2.update_traces(marker_sizemin=5, selector=dict(mode='markers'))
+
+    # update placegraph
+    dfa = filtered_data.copy()
+    hovertemp1 = "<b>Category: </b> %{label} <br>"
+    hovertemp1 += "<b>Number of appearances: </b> %{value}"
+    dfa1 = dfa.groupby(['place', 'category']).size().reset_index(name='number_of_placings')  # apply grouping to count number of comp appearances
+    fig4 = px.pie(dfa1, values='number_of_placings', names='category', title='Competition appearances by meet category',
+                  color='category', color_discrete_map={'A': 'gold', 'B': 'silver', 'C': 'saddlebrown'})
+    fig4.update_traces(hovertemplate=hovertemp1)
+
+
+    return fig, fig3, fig2, fig4, fig6
+
+# Trial for dynamic pie graph based on 3rd dropdown selection for category
+# Add a callback to set the value of the catradio component to all options' values
+@app.callback(
+    Output('catradio', 'value'),
+    Input('catradio', 'options'),
+    Input('catradio', 'value'))
+def select_all_options(options, values):
+    if 'select-all' in values:
+        return [x['value'] for x in options if x['value'] != 'select-all']
+    elif 'deselect-all' in values:
+        return []
+    else:
+        return values
+
+@app.callback(
+    Output(component_id='graph_placing', component_property='figure'),
+    Input(component_id='catradio', component_property='value'),
+    Input(dropdown, component_property='value'),
+    Input('event_sel', 'value'))
+def update_pie_graph(catradio_value, dropdown_value, event_sel_value):
+    if not catradio_value or not dropdown_value:
+        return {}
+    if not event_sel_value:
+        filtered_data = df.loc[(df['id'] == dropdown_value) & (df['category'].isin(catradio_value)) & (df['race'] == 'F')]
+    else:
+        if isinstance(event_sel_value, str):
+            event_sel_value = [event_sel_value]
+        filtered_data = df.loc[(df['id'] == dropdown_value) & (df['category'].isin(catradio_value)) & (df['discipline'].isin(event_sel_value)) & (df['race'] == 'F')]
+
+    filtered_data1 = filtered_data.groupby(['place', 'category']).size().reset_index(name='number_of_placings')
+    fig5 = px.histogram(filtered_data1, y='number_of_placings', x='place', color='place', color_discrete_sequence=px.colors.sequential.algae,
+                        color_discrete_map={'1.': 'gold', '2.': 'silver', '3.': 'saddlebrown'},
+                        category_orders={'place': ['1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.', '11.', '12.']})
+    fig5.update_layout(title="Placing by category (Finals only)")
+    return fig5
+
+# # data table to display athletes in the same event as the user input athlete
+# @app.callback(
+#     Output('datatable', 'data'),
+#     Input('event_sel', 'value'))
+# def update_datatable(event_select1):
+#     if not event_select1:
+#         return []
+#     else:
+#         if isinstance(event_select1, str):
+#             event_select1 = [event_select1]
+#         # Filter dataframe based on event selection
+#         filtered_data = df.loc[df['discipline'].isin(event_select1)]
+#         # Get unique values in 'name' column for filtered dataframe
+#         unique_names = filtered_data['name'].unique()
+#         # Create a new dataframe with only unique names
+#         unique_names_df = pd.DataFrame(unique_names, columns=['name'])
+#         # Return the unique names dataframe as dictionary format
+#         return unique_names_df.to_dict('records')
+
+
+@app.callback(
+    Output('athlete_2', 'options'),
+    Input('event_sel', 'value'))
+# callback for updating 2nd dropdown values
+# Update select_athlete_2 options based on filtered data
+def update_select_athlete_2_options(event_select1):
+    if not event_select1:
+        return dropdown_options
+    else:
+        if isinstance(event_select1, str):
+            event_select1 = [event_select1]
+        # Filter dataframe based on event selection
+        filtered_data = df.loc[df['discipline'].isin(event_select1)]
+        # Get unique values in 'name' column for filtered dataframe
+        unique_names = filtered_data['name'].unique()
+        # Create dropdown options using unique names
+        dropdown_options_filtered = [{'label': name, 'value': id} for id, name in zip(filtered_data['id'].unique(), unique_names)]
+        return dropdown_options_filtered
+
+
+# Run app
+if __name__ == '__main__':
+    app.run_server(port=8053)

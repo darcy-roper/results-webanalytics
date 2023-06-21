@@ -1,3 +1,5 @@
+# this program will form the page view when only considering 1 athletes' data
+# use 'test_app.py' for page 2 which will compare 2 athletes
 import dash
 from dash import dcc, Dash, dash_table, html
 from dash.dependencies import Output, Input
@@ -7,7 +9,7 @@ import plotly.express as px
 
 
 df = pd.read_csv('Dataframe_Analysis.csv', sep='|')  # updated csv following statistical calcs in 'join_csv.py'
-dff = pd.read_csv('WC22_Results.csv', sep=',')  # result data from Oregon WC 2022
+dff = pd.read_csv('Datasets/WC22_Results.csv', sep=',')  # result data from Oregon WC 2022
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
 
@@ -20,6 +22,7 @@ sngraph = dcc.Graph(id='sngraph', figure={})
 placegraph = dcc.Graph(id='placegraph', figure={})
 cat_placing = dcc.Graph(id='graph_placing', figure={})
 year_prog_graph = dcc.Graph(id='year_prog_graph', figure={})
+
 
 # format unique dropdown options
 unique_names = df['name'].unique()  # unique values from name column
@@ -63,6 +66,7 @@ catradio = dbc.Checklist(
     labelStyle={'display': 'inline-block', 'margin-right': '10px'})
 
 
+
 # Creating a dbc.Card for catradio and cat_placing
 cat_card = dbc.Card(
     [
@@ -88,14 +92,8 @@ app.layout = dbc.Container([
         dbc.Col([
             dropdown,
             event_select,
-            html.H3("Athletes with performances in the same event"),
-            dash_table.DataTable(
-                id='datatable',
-                columns=[{'name': 'Name', 'id': 'name'}],
-                data=[],
-                style_cell={'color': 'black', 'textAlign': 'left'}
-            ),
-        ], width=4),
+            #key_stats_card,
+        ], width=3),
         dbc.Col([
             dbc.Row([
                 dbc.Col([mygraph], width=12),
@@ -113,7 +111,7 @@ app.layout = dbc.Container([
             dbc.Row([
                 dbc.Col([year_prog_graph], width=12),
             ], justify='end'),
-        ], width=8),
+        ], width=9),
     ]),
 ], fluid=True)
 
@@ -245,26 +243,6 @@ def update_pie_graph(catradio_value, dropdown_value, event_sel_value):
                         category_orders={'place': ['1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.', '11.', '12.']})
     fig5.update_layout(title="Placing by category (Finals only)")
     return fig5
-
-# data table to display athletes in the same event as the user input athlete
-@app.callback(
-    Output('datatable', 'data'),
-    Input('event_sel', 'value'))
-def update_datatable(event_select1):
-    if not event_select1:
-        return []
-    else:
-        if isinstance(event_select1, str):
-            event_select1 = [event_select1]
-        # Filter dataframe based on event selection
-        filtered_data = df.loc[df['discipline'].isin(event_select1)]
-        # Get unique values in 'name' column for filtered dataframe
-        unique_names = filtered_data['name'].unique()
-        # Create a new dataframe with only unique names
-        unique_names_df = pd.DataFrame(unique_names, columns=['name'])
-        # Return the unique names dataframe as dictionary format
-        return unique_names_df.to_dict('records')
-
 
 
 # Run app
