@@ -331,4 +331,4 @@ def update_select_athlete_2_options(event_select1):
 
 # Run app
 if __name__ == '__main__':
-    app.run_server(port=8053)
+    app.run_server(port=8052)

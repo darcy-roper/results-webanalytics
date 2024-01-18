@@ -1,16 +1,20 @@
 # this program will form the page view when only considering 1 athletes' data
 # use 'test_app.py' for page 2 which will compare 2 athletes
 import dash
-from dash import dcc, Dash, dash_table, html
+from dash import dcc, Dash, dash_table, html, State
 from dash.dependencies import Output, Input
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+import flask
 
 
 df = pd.read_csv('Dataframe_Analysis.csv', sep='|')  # updated csv following statistical calcs in 'join_csv.py'
 dff = pd.read_csv('Datasets/WC22_Results.csv', sep=',')  # result data from Oregon WC 2022
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
+
+# Create a new Dash app for the comparison page
+comparison_app = dash.Dash(__name__, external_stylesheets=[dbc.themes.QUARTZ])
 
 
 # Figure components
@@ -92,7 +96,8 @@ app.layout = dbc.Container([
         dbc.Col([
             dropdown,
             event_select,
-            #key_stats_card,
+            # key_stats_card,
+            html.Button('Compare 2 Athletes', id='compare-button', className='btn btn-primary mt-3')
         ], width=3),
         dbc.Col([
             dbc.Row([
@@ -113,8 +118,42 @@ app.layout = dbc.Container([
             ], justify='end'),
         ], width=9),
     ]),
+    html.Div(id='page-content')
 ], fluid=True)
 
+# Layout for the comparison page
+comparison_app.layout = html.Div([
+    html.H1('Comparison Page'),
+    html.Button('Back to Original Page', id='back-button', className='btn btn-primary mt-3')
+])
+
+# navigation to new page
+@app.callback(
+    Output('url', 'pathname'),
+    Input('compare-button', 'n_clicks'),
+    State('url', 'pathname')
+)
+def navigate_to_comparison_page(n_clicks, current_pathname):
+    if n_clicks and n_clicks > 0:
+        if current_pathname != '/comparison':
+            return '/comparison'
+    return current_pathname
+
+# navigation back to original page
+@app.callback(
+    Output('url', 'pathname'),
+    Input('back-button', 'n_clicks'),
+    State('url', 'pathname')
+)
+def navigate_to_original_page(n_clicks, current_pathname):
+    if n_clicks and n_clicks > 0:
+        if current_pathname != '/':
+            return '/'
+    return current_pathname
+
+
+
+#_____________________________________________________________________#
 # Callbacks for handling both inputs from the user
 @app.callback(
     Output(component_id='event_sel', component_property='options'),
@@ -248,3 +287,4 @@ def update_pie_graph(catradio_value, dropdown_value, event_sel_value):
 # Run app
 if __name__ == '__main__':
     app.run_server(port=8053)
+    comparison_app.run_server(port=8054, debug=True) # new port needed for 2nd page
