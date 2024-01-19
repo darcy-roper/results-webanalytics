@@ -2,7 +2,7 @@
 
 import plotly.io as pio
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
@@ -72,16 +72,16 @@ app.layout = dbc.Container([
     # Single row with the title, image, and "Powered by" text
     dbc.Row([
         # Column for the image
-        dbc.Col(html.Img(src='assets/World_Athletics_logo.png', style={'maxHeight': '50px', 'maxWidth': '100px', 'paddingLeft': '50px'}),
-                width={'size': 1, 'offset': 0},
+        dbc.Col(html.Img(src='/assets/World_Athletics_logo.png', style={'maxHeight': '65px', 'paddingLeft': '25px'}),
+                width={'size': 2, 'offset': 0},
                 class_name='top_rows',
-                style={'display': 'flex', 'alignItems': 'center'}),
+                style={'display': 'flex', 'alignItems': 'flex-end'}),
 
         # Column for the "Powered by" text
-        dbc.Col(html.Div('Powered by', style={'paddingLeft': '10px', 'alignSelf': 'center'}),
-                width={'size': 3, 'offset': 0},
+        dbc.Col(html.Div('Powered by', style={'paddingLeft': '0px', 'alignSelf': 'flex-end', 'fontSize': '10px'}),
+                width={'size': 1, 'offset': 0},
                 class_name='top_rows',
-                style={'display': 'flex', 'alignItems': 'center'}),
+                style={'display': 'flex', 'alignItems': 'flex-end'}),
 
         # Column for the title
         dbc.Col(html.H1('Australian Athlete Analytics',
@@ -91,7 +91,7 @@ app.layout = dbc.Container([
                                'alignItems': 'center',
                                'justifyContent': 'center',
                                'height': '100%'}),
-                width={'size': 8, 'offset': 0},
+                width={'size': 6, 'offset': 0},
                 class_name='top_rows'),
         ], style={'height': '80px'}, class_name='top_rows'),
 
@@ -103,18 +103,20 @@ app.layout = dbc.Container([
         dbc.Col(event_dropdown, width=6, lg={'size': 3})
     ]),
     dbc.Row([], style={'height': '20px'}),
+
+    # Rows for each graphs
     dbc.Row([
-        dbc.Col(mygraph, width=12, lg=6),
-        dbc.Col(sngraph, width=12, lg=6)
+        dbc.Col(id='mygraph-wrapper', children=[dcc.Graph(id='mygraph')], width=12, lg=6),
+        dbc.Col(id='sngraph-wrapper', children=[dcc.Graph(id='sngraph')], width=12, lg=6)
     ]),
     dbc.Row([
-        dbc.Col(mapgraph, width=12, lg=6),
-        dbc.Col(placegraph, width=12, lg=6)
+        dbc.Col(id='mapgraph-wrapper', children=[dcc.Graph(id='mapgraph')], width=12, lg=6),
+        dbc.Col(id='placegraph-wrapper', children=[dcc.Graph(id='placegraph')], width=12, lg=6)
     ]),
     dbc.Row([
-        dbc.Col(year_prog_graph, width=12)
+        dbc.Col(id='year_prog_graph-wrapper', children=[dcc.Graph(id='year_prog_graph')], width=12)
     ]),
-        dcc.Interval(id='interval-component', interval=1*1000, n_intervals=0),# 1 second
+   # dcc.Interval(id='interval-component', interval=1*1000, n_intervals=0), # 1 second
     dcc.Store(id='initialization-store', data={'is_initialized': False}),
 ], fluid=True)
 
@@ -124,16 +126,12 @@ app.layout = dbc.Container([
      Output('event-dropdown', 'value')],
     Input('athlete-dropdown', 'value'))
 def update_event_dropdown(selected_athlete):
-    # Get the disciplines for the selected athlete
-    athlete_disciplines = df[df['id'] == selected_athlete]['discipline']
-
-    # Count the occurrences of each discipline and find the most frequent one
-    most_frequent_discipline = athlete_disciplines.value_counts().idxmax()
-
-    # Prepare the options for the event dropdown
-    options = [{'label': event, 'value': event} for event in athlete_disciplines.unique()]
-
-    return options, most_frequent_discipline
+    athlete_events = df[df['id'] == selected_athlete]['discipline'].value_counts()
+    # Determine the most frequent event
+    most_frequent_event = athlete_events.idxmax() if not athlete_events.empty else None
+    # Prepare options for the event dropdown
+    options = [{'label': event, 'value': event} for event in athlete_events.index]
+    return options, most_frequent_event
 
 # New callback to set initialization state
 @app.callback(
@@ -145,43 +143,97 @@ def set_initialization_state(athlete_value, event_value):
         return {'is_initialized': True}
     return dash.no_update
 
-# Callback for updating graphs
+
+# graph 1 callback
 @app.callback(
-    [Output('mygraph', 'figure'),
-     Output('sngraph', 'figure'),
-     Output('mapgraph', 'figure'),
-     Output('placegraph', 'figure'),
-     Output('year_prog_graph', 'figure')],
+    Output('mygraph-wrapper', 'children'),  # Target the wrapper's 'children' property
     [Input('athlete-dropdown', 'value'),
-     Input('event-dropdown', 'value')])
-def update_graphs(athlete_id, events):
+     Input('event-dropdown', 'value')],
+    [State('event-dropdown', 'value')])
+def update_mygraph(athlete_id, event_trigger, event_state):
+    ctx = callback_context
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
     # Filter data for the selected athlete
     filtered_data = df[df['id'] == athlete_id]
 
-    # If any events are selected, further filter the data
+    # Determine which event value to use
+    events = event_trigger if triggered_id == 'event-dropdown' else event_state
+
+    # Further filter the data if events are selected
     if events:
         if isinstance(events, list):
-            # If multiple events are selected
             filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
         else:
-            # If only one event is selected
             filtered_data = filtered_data[filtered_data['discipline'] == events]
 
-    # Check if data is available for plotting
-    if filtered_data.empty:
-        return [px.scatter(title="No Data Available")] * 5
-
-    # Graph 1
-    fig = px.scatter(filtered_data, x="date", y="resultscore",
-                     color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
-                     size_max=8)  # to increase max marker size
-    fig.update_layout(
+    # Create the figure for 'mygraph'
+    fig1 = px.scatter(filtered_data, x="date", y="resultscore",
+                      color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
+                      size_max=8)
+    fig1.update_layout(
         legend_title_text='',
         title="Event Results - Hover for more information!",
         title_x=0.4)
-    fig.update_traces(marker=dict(size=10, line=dict(width=1, color='Black')))  # increase marker size and border width
+    fig1.update_traces(marker=dict(size=10, line=dict(width=1, color='Black')))
 
-    # Graph 2
+    # If the callback was triggered by the athlete dropdown, wrap in dcc.Loading
+    if triggered_id == 'athlete-dropdown':
+        return dcc.Loading(children=dcc.Graph(figure=fig1))
+    else:
+        # If triggered by the event dropdown, return the graph only
+        return dcc.Graph(figure=fig1)
+
+
+# functions to create each figure
+def create_figure1(filtered_data):
+    fig1 = px.scatter(filtered_data, x="date", y="resultscore",
+                     color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
+                     size_max=8)  # to increase max marker size
+    fig1.update_layout(
+        legend_title_text='',
+        title="Event Results - Hover for more information!",
+        title_x=0.4)
+    fig1.update_traces(marker=dict(size=10, line=dict(width=1, color='Black')))  # increase marker size and border width
+
+    return fig1
+
+
+# Graph 2 callback
+@app.callback(
+    Output('sngraph-wrapper', 'children'),
+    [Input('athlete-dropdown', 'value'),
+     Input('event-dropdown', 'value')],
+    [State('event-dropdown', 'value')])
+def update_sngraph(athlete_id, event_trigger, event_state):
+    ctx = callback_context
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    # Filter data for the selected athlete
+    filtered_data = df[df['id'] == athlete_id]
+
+    # Determine which event value to use
+    events = event_trigger if triggered_id == 'event-dropdown' else event_state
+
+    # Further filter the data if events are selected
+    if events:
+        if isinstance(events, list):
+            filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
+        else:
+            filtered_data = filtered_data[filtered_data['discipline'] == events]
+
+    # Create the figure for 'sngraph'
+    fig2 = create_figure2(filtered_data)
+
+    # Wrap the figure in loading component if triggered by athlete-dropdown
+    if triggered_id == 'athlete-dropdown':
+        return dcc.Loading(children=dcc.Graph(figure=fig2))
+    else:
+        return dcc.Graph(figure=fig2)
+
+
+# Function to create figure for Graph 2
+def create_figure2(filtered_data):
     dfb = filtered_data.copy()
     dfb['season'] = dfb['date'].dt.strftime('%Y')
     dfb['season'] = dfb['season'].astype(int)
@@ -189,9 +241,43 @@ def update_graphs(athlete_id, events):
     fig2 = px.line(dfb, x="season", y="sn_best", color="disciplineCode", markers=True)
     fig2.update_layout(legend_title_text='', title="Season's bests", title_x=0.4)
     fig2.update_traces(line=dict(width=3), marker=dict(size=10, line=dict(width=1, color='Black')))
-    # line above increase line and marker size and border width
+    return fig2
 
-    # Graph 3 - update map
+
+# graph 3 callback
+@app.callback(
+    Output('mapgraph-wrapper', 'children'),
+    [Input('athlete-dropdown', 'value'),
+     Input('event-dropdown', 'value')],
+    [State('event-dropdown', 'value')])
+def update_mapgraph(athlete_id, event_trigger, event_state):
+    ctx = callback_context
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    # Filter data for the selected athlete
+    filtered_data = df[df['id'] == athlete_id]
+
+    # Determine which event value to use
+    events = event_trigger if triggered_id == 'event-dropdown' else event_state
+
+    # Further filter the data if events are selected
+    if events:
+        if isinstance(events, list):
+            filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
+        else:
+            filtered_data = filtered_data[filtered_data['discipline'] == events]
+
+    # Create the figure for 'mapgraph'
+    fig3 = create_figure3(filtered_data)
+
+    # Wrap the figure in loading component if triggered by athlete-dropdown
+    if triggered_id == 'athlete-dropdown':
+        return dcc.Loading(children=dcc.Graph(figure=fig3))
+    else:
+        return dcc.Graph(figure=fig3)
+
+# Graph 3 - update map
+def create_figure3(filtered_data):
     dff = filtered_data.copy()
     dff['count'] = dff.groupby(['country'])['__typename'].transform('count')
     fig3 = px.scatter_geo(dff, locations="country", color="country",
@@ -207,9 +293,43 @@ def update_graphs(athlete_id, events):
     )
     fig3.update_traces(marker=dict(line=dict(width=1, color='Black')), selector=dict(mode='markers'))
     fig3.update_traces(marker_sizemin=5, selector=dict(mode='markers'))
+    return fig3
 
 
-    # Graph 4 - Placing
+# graph 4 callback
+@app.callback(
+    Output('placegraph-wrapper', 'children'),
+    [Input('athlete-dropdown', 'value'),
+     Input('event-dropdown', 'value')],
+    [State('event-dropdown', 'value')])
+def update_placegraph(athlete_id, event_trigger, event_state):
+    ctx = callback_context
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    # Filter data for the selected athlete
+    filtered_data = df[df['id'] == athlete_id]
+
+    # Determine which event value to use
+    events = event_trigger if triggered_id == 'event-dropdown' else event_state
+
+    # Further filter the data if events are selected
+    if events:
+        if isinstance(events, list):
+            filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
+        else:
+            filtered_data = filtered_data[filtered_data['discipline'] == events]
+
+    # Create the figure for 'placegraph'
+    fig4 = create_figure4(filtered_data)
+
+    # Wrap the figure in loading component if triggered by athlete-dropdown
+    if triggered_id == 'athlete-dropdown':
+        return dcc.Loading(children=dcc.Graph(figure=fig4))
+    else:
+        return dcc.Graph(figure=fig4)
+
+# Graph 4 - Placing
+def create_figure4(filtered_data):
     dfa = filtered_data.copy()
     hovertemp1 = "<b>Category: </b> %{label} <br>"
     hovertemp1 += "<b>Number of appearances: </b> %{value}"
@@ -218,9 +338,43 @@ def update_graphs(athlete_id, events):
                   color_discrete_map={'A': 'gold', 'B': 'silver', 'C': 'saddlebrown'})
     fig4.update_layout(title='Competition appearances by meet category', title_x=0.3)
     fig4.update_traces(hovertemplate=hovertemp1)
+    return fig4
+
+# graph 5 callback
+@app.callback(
+    Output('year_prog_graph-wrapper', 'children'),
+    [Input('athlete-dropdown', 'value'),
+     Input('event-dropdown', 'value')],
+    [State('event-dropdown', 'value')])
+def update_year_prog_graph(athlete_id, event_trigger, event_state):
+    ctx = callback_context
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    # Filter data for the selected athlete
+    filtered_data = df[df['id'] == athlete_id]
+
+    # Determine which event value to use
+    events = event_trigger if triggered_id == 'event-dropdown' else event_state
+
+    # Further filter the data if events are selected
+    if events:
+        if isinstance(events, list):
+            filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
+        else:
+            filtered_data = filtered_data[filtered_data['discipline'] == events]
+
+    # Create the figure for 'year_prog_graph'
+    fig5 = create_figure5(filtered_data)
+
+    # Wrap the figure in loading component if triggered by athlete-dropdown
+    if triggered_id == 'athlete-dropdown':
+        return dcc.Loading(children=dcc.Graph(figure=fig5))
+    else:
+        return dcc.Graph(figure=fig5)
 
 
-    # Graph 5 - trends in each year
+# Graph 5 - trends in each year
+def create_figure5(filtered_data):
     dfc = filtered_data.copy()
     dfc['year'] = dfc['date'].dt.strftime('%Y')
     dfc['year'] = dfc['year'].astype(int)
@@ -237,8 +391,7 @@ def update_graphs(athlete_id, events):
         trendline_lowess['line']['color'] = 'White'  # Set color of trendline_lowess to blue
         fig5.add_trace(trendline_ols)
         fig5.add_trace(trendline_lowess)
-
-    return fig, fig2, fig3, fig4, fig5
+    return fig5
 
 # Run the app
 if __name__ == '__main__':
