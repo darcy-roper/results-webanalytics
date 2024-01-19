@@ -2,7 +2,7 @@
 
 import plotly.io as pio
 import dash
-from dash import dcc, html, Input, Output, State
+from dash import dcc, html, Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
@@ -26,33 +26,39 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 pio.templates.default = plotly_template
 
 
-default_athlete_id = '14336705'
+default_athlete_id = 14336705
 default_athlete_events = df[df['id'] == default_athlete_id]['discipline'].unique()
 
-# Set the default event to 'Javelin Throw' if available, otherwise use the first event
-default_event = 'Javelin Throw'
-
-
-# Set the default event to 'Javelin Throw' if available, otherwise use the first event
-default_event = 'Javelin Throw' if 'Javelin Throw' in default_athlete_events \
-    else default_athlete_events[0] if len(default_athlete_events) > 0 else None
+# Extract unique disciplines for the default athlete
+default_athlete_disciplines = df[df['id'] == default_athlete_id]['discipline'].unique()
+# Determine the default event
+if 'Javelin Throw' in default_athlete_disciplines:
+    default_event = 'Javelin Throw'
+elif len(default_athlete_disciplines) > 0:
+    # If 'Javelin Throw' is not available but there are other disciplines
+    default_event = default_athlete_disciplines[0]
+else:
+    # If the default athlete has no disciplines listed
+    default_event = None
 
 # Dropdown for athlete selection
-dropdown = dcc.Dropdown(
+athlete_dropdown = dcc.Dropdown(
     id='athlete-dropdown',
     options=[{'label': name, 'value': id} for id, name in zip(df['id'].unique(), df['name'].unique())],
     value=default_athlete_id,
     clearable=False,
     searchable=True,
-    style={'color': '#495057'})
+    style={'color': '#495057'}
+)
 
 # Dropdown for event selection
-event_select = dcc.Dropdown(
+event_dropdown = dcc.Dropdown(
     id='event-dropdown',
     options=[{'label': event, 'value': event} for event in default_athlete_events],
     value=default_event,
     multi=True,
-    style={'color': '#495057'})
+    style={'color': '#495057'}
+)
 
 # Graph components
 mygraph = dcc.Graph(id='mygraph')
@@ -66,8 +72,8 @@ app.layout = dbc.Container([
     dbc.Row([dbc.Col(html.H1('Australian Athletics Analytics', style={'textAlign': 'center', 'color': '#fff'}), width=12)]),
     dbc.Row([], style={'height': '20px'}), # row of nothing between the title and dropdowns
     dbc.Row([
-        dbc.Col(dropdown, width=6, lg={'size': 3, 'offset': 3}),
-        dbc.Col(event_select, width=6, lg={'size': 3})
+        dbc.Col(athlete_dropdown, width=6, lg={'size': 3, 'offset': 3}),
+        dbc.Col(event_dropdown, width=6, lg={'size': 3})
     ]),
     dbc.Row([], style={'height': '20px'}),
     dbc.Row([
@@ -85,13 +91,22 @@ app.layout = dbc.Container([
     dcc.Store(id='initialization-store', data={'is_initialized': False}),
 ], fluid=True)
 
-# Callback to update event dropdown based on selected athlete
+# Callback to update event dropdown based on selected athlete and default to most frequent event
 @app.callback(
-    Output('event-dropdown', 'options'),
+    [Output('event-dropdown', 'options'),
+     Output('event-dropdown', 'value')],
     Input('athlete-dropdown', 'value'))
 def update_event_dropdown(selected_athlete):
-    athlete_events = df[df['id'] == selected_athlete]['discipline'].unique()
-    return [{'label': event, 'value': event} for event in athlete_events]
+    # Get the disciplines for the selected athlete
+    athlete_disciplines = df[df['id'] == selected_athlete]['discipline']
+
+    # Count the occurrences of each discipline and find the most frequent one
+    most_frequent_discipline = athlete_disciplines.value_counts().idxmax()
+
+    # Prepare the options for the event dropdown
+    options = [{'label': event, 'value': event} for event in athlete_disciplines.unique()]
+
+    return options, most_frequent_discipline
 
 # New callback to set initialization state
 @app.callback(
@@ -111,22 +126,21 @@ def set_initialization_state(athlete_value, event_value):
      Output('placegraph', 'figure'),
      Output('year_prog_graph', 'figure')],
     [Input('athlete-dropdown', 'value'),
-     Input('event-dropdown', 'value')],
-    [State('initialization-store', 'data')])
-def update_all_graphs(athlete_input, event_input, init_data):
-    # Check if it's the initial load
-    if init_data and not init_data['is_initialized']:
-        athlete_input = default_athlete_id
-        event_input = [default_event]
-        # Update the initialization store to indicate that the initial load is complete
-        init_data['is_initialized'] = True
+     Input('event-dropdown', 'value')])
+def update_graphs(athlete_id, events):
+    # Filter data for the selected athlete
+    filtered_data = df[df['id'] == athlete_id]
 
-    # Filter data based on user input
-    filtered_data = df[df['id'] == athlete_input]
-    if event_input:
-        filtered_data = filtered_data[filtered_data['discipline'].isin(event_input)]
+    # If any events are selected, further filter the data
+    if events:
+        if isinstance(events, list):
+            # If multiple events are selected
+            filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
+        else:
+            # If only one event is selected
+            filtered_data = filtered_data[filtered_data['discipline'] == events]
 
-    # Ensure the filtered data is not empty before plotting
+    # Check if data is available for plotting
     if filtered_data.empty:
         return [px.scatter(title="No Data Available")] * 5
 

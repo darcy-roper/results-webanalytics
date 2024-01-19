@@ -91,13 +91,22 @@ app.layout = dbc.Container([
     dcc.Store(id='initialization-store', data={'is_initialized': False}),
 ], fluid=True)
 
-# Callback to update event dropdown based on selected athlete
+# Callback to update event dropdown based on selected athlete and default to most frequent event
 @app.callback(
-    Output('event-dropdown', 'options'),
+    [Output('event-dropdown', 'options'),
+     Output('event-dropdown', 'value')],
     Input('athlete-dropdown', 'value'))
 def update_event_dropdown(selected_athlete):
-    athlete_events = df[df['id'] == selected_athlete]['discipline'].unique()
-    return [{'label': event, 'value': event} for event in athlete_events]
+    # Get the disciplines for the selected athlete
+    athlete_disciplines = df[df['id'] == selected_athlete]['discipline']
+
+    # Count the occurrences of each discipline and find the most frequent one
+    most_frequent_discipline = athlete_disciplines.value_counts().idxmax()
+
+    # Prepare the options for the event dropdown
+    options = [{'label': event, 'value': event} for event in athlete_disciplines.unique()]
+
+    return options, most_frequent_discipline
 
 # New callback to set initialization state
 @app.callback(
@@ -118,12 +127,20 @@ def set_initialization_state(athlete_value, event_value):
      Output('year_prog_graph', 'figure')],
     [Input('athlete-dropdown', 'value'),
      Input('event-dropdown', 'value')])
-def update_graphs(athlete_id, event_name):
+def update_graphs(athlete_id, events):
+    # Filter data for the selected athlete
     filtered_data = df[df['id'] == athlete_id]
 
-    if event_name:
-        filtered_data = filtered_data[filtered_data['discipline'] == event_name]
+    # If any events are selected, further filter the data
+    if events:
+        if isinstance(events, list):
+            # If multiple events are selected
+            filtered_data = filtered_data[filtered_data['discipline'].isin(events)]
+        else:
+            # If only one event is selected
+            filtered_data = filtered_data[filtered_data['discipline'] == events]
 
+    # Check if data is available for plotting
     if filtered_data.empty:
         return [px.scatter(title="No Data Available")] * 5
 
