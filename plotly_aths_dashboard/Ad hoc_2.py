@@ -1,26 +1,16 @@
 
-import pandas as pd
+import dash
+from dash import html
 
-# Load data
-df = pd.read_csv('Dataframe_Analysis.csv', sep='|')
-df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
+# Initialize the Dash app
+app = dash.Dash(__name__)
 
+# App layout
+app.layout = html.Div([
+    html.H1("Image Display Test"),
+    html.Img(src='World_Athletics_logo.png', style={'maxWidth': '100%', 'height': 'auto'})
+])
 
-default_athlete_id = 14336705
-default_athlete_events = df[df['id'] == default_athlete_id]['discipline'].unique()
-
-# Extract unique disciplines for the default athlete
-default_athlete_disciplines = df[df['id'] == default_athlete_id]['discipline'].unique()
-# Determine the default event
-if 'Javelin Throw' in default_athlete_disciplines:
-    default_event = 'Javelin Throw'
-elif len(default_athlete_disciplines) > 0:
-    # If 'Javelin Throw' is not available but there are other disciplines
-    default_event = default_athlete_disciplines[0]
-else:
-    # If the default athlete has no disciplines listed
-    default_event = None
-
-print(default_athlete_id)
-print(default_event)
-#print(df[df['id'] == default_athlete_id])
+# Run the app
+if __name__ == '__main__':
+    app.run_server(debug=True)

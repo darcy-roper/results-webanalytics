@@ -69,8 +69,35 @@ year_prog_graph = dcc.Graph(id='year_prog_graph')
 
 # Layout
 app.layout = dbc.Container([
-    dbc.Row([dbc.Col(html.H1('Australian Athletics Analytics', style={'textAlign': 'center', 'color': '#fff'}), width=12)]),
-    dbc.Row([], style={'height': '20px'}), # row of nothing between the title and dropdowns
+    # Single row with the title, image, and "Powered by" text
+    dbc.Row([
+        # Column for the image
+        dbc.Col(html.Img(src='assets/World_Athletics_logo.png', style={'maxHeight': '50px', 'maxWidth': '100px', 'paddingLeft': '50px'}),
+                width={'size': 1, 'offset': 0},
+                class_name='top_rows',
+                style={'display': 'flex', 'alignItems': 'center'}),
+
+        # Column for the "Powered by" text
+        dbc.Col(html.Div('Powered by', style={'paddingLeft': '10px', 'alignSelf': 'center'}),
+                width={'size': 3, 'offset': 0},
+                class_name='top_rows',
+                style={'display': 'flex', 'alignItems': 'center'}),
+
+        # Column for the title
+        dbc.Col(html.H1('Australian Athlete Analytics',
+                        style={'textAlign': 'center',
+                               'color': '#262626',
+                               'display': 'flex',
+                               'alignItems': 'center',
+                               'justifyContent': 'center',
+                               'height': '100%'}),
+                width={'size': 8, 'offset': 0},
+                class_name='top_rows'),
+        ], style={'height': '80px'}, class_name='top_rows'),
+
+    dbc.Row([], style={'height': '15px'}), # another empty row
+
+    # Row with dropdown elements
     dbc.Row([
         dbc.Col(athlete_dropdown, width=6, lg={'size': 3, 'offset': 3}),
         dbc.Col(event_dropdown, width=6, lg={'size': 3})
@@ -178,7 +205,7 @@ def update_graphs(athlete_id, events):
             showocean=True, oceancolor="#0E4F77"  # Optionally set the ocean color if needed
         )
     )
-    fig3.update_traces(marker=dict(line=dict(width=2, color='Blue')), selector=dict(mode='markers'))
+    fig3.update_traces(marker=dict(line=dict(width=1, color='Black')), selector=dict(mode='markers'))
     fig3.update_traces(marker_sizemin=5, selector=dict(mode='markers'))
 
 
