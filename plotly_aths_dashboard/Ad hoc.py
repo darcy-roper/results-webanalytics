@@ -122,7 +122,7 @@ app.layout = dbc.Container([
         dbc.Col(id='year_prog_graph-wrapper', children=[dcc.Graph(id='year_prog_graph')], width=12)
     ]),
     dbc.Row([
-        dbc.Col(id='champ_bw_plot-wrapper', children=[dcc.Graph(id='champ_bw_plot')], width=8),
+        dbc.Col(id='champ_bw_plot-wrapper', children=[dcc.Graph(id='champ_bw_plot')], width=12),
     ]),
     dcc.Interval(id='interval-component', interval=1*1000, n_intervals=0), # 1 second
     dcc.Store(id='initialization-store', data={'is_initialized': False}),
@@ -386,7 +386,7 @@ def create_figure5(filtered_data):
     dfc['year'] = dfc['year'].astype(int)
     fig5 = px.scatter(dfc, x="date", y="resultscore",
                   color="discipline", hover_data=["category", "place", "mark", "wind"])
-    fig5.update_layout(legend_title_text='', title="Season rates of progression", title_x=0.45)
+    fig5.update_layout(legend_title_text='', title="Season rates of progression", title_x=0.43)
     fig5.update_traces(marker=dict(size=10, line=dict(width=1, color='Black'))) # increase marker size
     fig5.update_yaxes(title="Result Score")
     fig5.update_xaxes(title="")
@@ -402,7 +402,6 @@ def create_figure5(filtered_data):
     return fig5
 
 
-####attempt to create 6th graph (box plot)######
 # Callback for Graph 6 (Box plot based on discipline and indirectly determined athlete's sex)
 @app.callback(
     Output('champ_bw_plot-wrapper', 'children'),
@@ -422,15 +421,32 @@ def update_box22(athlete_name, discipline):
                                  (wc_data['sex'] == athlete_sex) &
                                  (wc_data['champs'] == 'WC_2023')]
 
-    # Create the figure for 'box and whisker' for both years
-    fig6 = create_boxplot(filtered_data_2022, filtered_data_2023, discipline, athlete_sex)
+    # Filter OLY_data for 2021
+    filtered_data_2021 = wc_data[(wc_data['discipline'] == discipline) &
+                                 (wc_data['sex'] == athlete_sex) &
+                                 (wc_data['champs'] == 'OLY_2021')]
+
+    # Filter Dataframe for athlete's top 10 best results
+    # Ignoring all records where 'notlegal' = True
+    filtered_data_athlete = df[(df['id'] == athlete_name) &
+                               (df['discipline'] == discipline) &
+                               (df['notlegal'] != 'True')] # ignores illegal performances
+    top_10 = filtered_data_athlete.nlargest(10, 'resultscore') # gets 10 best legal performances
+
+
+    # Create the figure for 'box and whisker' for championship years
+    fig6 = create_boxplot(filtered_data_2021, filtered_data_2022, filtered_data_2023, top_10, discipline, athlete_sex)
 
     # Return the figure wrapped in dcc.Graph
     return dcc.Graph(figure=fig6)
 
 # Function to create a box plot for both WC_2022 and WC_2023
-def create_boxplot(data_2022, data_2023, discipline, sex):
+def create_boxplot(data_2021, data_2022, data_2023, top_10, discipline, sex):
     fig6 = go.Figure()
+
+    # Check if filtered data for 2021 is not empty and add box plot
+    if not data_2021.empty:
+        fig6.add_trace(go.Box(y=data_2021['resultscore'], name='Tokyo 2021'))
 
     # Check if filtered data for 2022 is not empty and add box plot
     if not data_2022.empty:
@@ -440,9 +456,13 @@ def create_boxplot(data_2022, data_2023, discipline, sex):
     if not data_2023.empty:
         fig6.add_trace(go.Box(y=data_2023['resultscore'], name='Budapest 2023'))
 
+    # Check if filtered data for athlete is not empty and add box plot
+    if not top_10.empty:
+        fig6.add_trace(go.Box(y=top_10['resultscore'], name="Athlete's Top 10 Best Results"))
+
     # Update the layout and titles
     fig6.update_layout(
-        title=f'{discipline} ({sex}) - Major Championship Final',
+        title=f'{discipline} ({sex}) - Major Championship Final', title_x=0.4,
         yaxis_title='Result Score')
 
     return fig6
