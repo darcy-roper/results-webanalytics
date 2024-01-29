@@ -1,6 +1,7 @@
 #Dahsboard for single athlete views of their results history
 
 import plotly.io as pio
+import plotly.graph_objects as go
 import dash
 from dash import dcc, html, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
@@ -10,6 +11,9 @@ import plotly.express as px
 # Load data
 df = pd.read_csv('Dataframe_Analysis.csv', sep='|')
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
+
+# Load WC 2022 data for B&W plots
+wc_data = pd.read_csv('Datasets/WC22_Results.csv', sep=',')
 
 # Customize Plotly template
 plotly_template = pio.templates["plotly"]
@@ -66,6 +70,7 @@ sngraph = dcc.Graph(id='sngraph')
 mapgraph = dcc.Graph(id='mapgraph')
 placegraph = dcc.Graph(id='placegraph')
 year_prog_graph = dcc.Graph(id='year_prog_graph')
+champ_bw_plot = dcc.Graph(id='champ_bw_plot')
 
 # Layout
 app.layout = dbc.Container([
@@ -116,7 +121,10 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Col(id='year_prog_graph-wrapper', children=[dcc.Graph(id='year_prog_graph')], width=12)
     ]),
-   # dcc.Interval(id='interval-component', interval=1*1000, n_intervals=0), # 1 second
+    dbc.Row([
+        dbc.Col(id='champ_bw_plot-wrapper', children=[dcc.Graph(id='champ_bw_plot')], width=8),
+    ]),
+    dcc.Interval(id='interval-component', interval=1*1000, n_intervals=0), # 1 second
     dcc.Store(id='initialization-store', data={'is_initialized': False}),
 ], fluid=True)
 
@@ -167,34 +175,31 @@ def update_mygraph(athlete_id, event_trigger, event_state):
         else:
             filtered_data = filtered_data[filtered_data['discipline'] == events]
 
+    # Function to return figure
+    fig1 = create_figure1(filtered_data)
+
+    # If the callback was triggered by the athlete dropdown, wrap in dcc.Loading
+    if triggered_id == 'athlete-dropdown':
+        return dcc.Loading(children=dcc.Graph(figure=fig1), type="default")
+    else:
+        # If triggered by the event dropdown, return the graph only
+        return dcc.Graph(figure=fig1)
+
+
+# functions to create each figure
+def create_figure1(filtered_data):
     # Create the figure for 'mygraph'
     fig1 = px.scatter(filtered_data, x="date", y="resultscore",
                       color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
                       size_max=8)
     fig1.update_layout(
         legend_title_text='',
-        title="Event Results - Hover for more information!",
+        title="Event Results",
         title_x=0.4)
+    # Update x-axis and y-axis labels
+    fig1.update_xaxes(title='')  # remove x-axis label
+    fig1.update_yaxes(title='Result Score')  # rename y-axis label
     fig1.update_traces(marker=dict(size=10, line=dict(width=1, color='Black')))
-
-    # If the callback was triggered by the athlete dropdown, wrap in dcc.Loading
-    if triggered_id == 'athlete-dropdown':
-        return dcc.Loading(children=dcc.Graph(figure=fig1))
-    else:
-        # If triggered by the event dropdown, return the graph only
-        return dcc.Graph(figure=fig1)
-    
-
-# functions to create each figure
-def create_figure1(filtered_data):
-    fig1 = px.scatter(filtered_data, x="date", y="resultscore",
-                     color="disciplineCode", hover_data=["category", "place", "mark", "wind"],
-                     size_max=8)  # to increase max marker size
-    fig1.update_layout(
-        legend_title_text='',
-        title="Event Results - Hover for more information!",
-        title_x=0.4)
-    fig1.update_traces(marker=dict(size=10, line=dict(width=1, color='Black')))  # increase marker size and border width
 
     return fig1
 
@@ -240,6 +245,7 @@ def create_figure2(filtered_data):
     dfb['sn_best'] = dfb.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
     fig2 = px.line(dfb, x="season", y="sn_best", color="disciplineCode", markers=True)
     fig2.update_layout(legend_title_text='', title="Season's bests", title_x=0.4)
+    fig2.update_xaxes(title='') # remove xaxis title
     fig2.update_traces(line=dict(width=3), marker=dict(size=10, line=dict(width=1, color='Black')))
     return fig2
 
@@ -382,6 +388,8 @@ def create_figure5(filtered_data):
                   color="discipline", hover_data=["category", "place", "mark", "wind"])
     fig5.update_layout(legend_title_text='', title="Season rates of progression", title_x=0.45)
     fig5.update_traces(marker=dict(size=10, line=dict(width=1, color='Black'))) # increase marker size
+    fig5.update_yaxes(title="Result Score")
+    fig5.update_xaxes(title="")
     # Add trend lines for each year
     for year in dfc['year'].unique():
         group = dfc[dfc['year'] == year]
@@ -392,6 +400,53 @@ def create_figure5(filtered_data):
         fig5.add_trace(trendline_ols)
         fig5.add_trace(trendline_lowess)
     return fig5
+
+
+####attempt to create 6th graph (box plot)######
+# Callback for Graph 6 (Box plot based on discipline and indirectly determined athlete's sex)
+@app.callback(
+    Output('champ_bw_plot-wrapper', 'children'),
+    [Input('athlete-dropdown', 'value'),  # This provides the name of the athlete
+     Input('event-dropdown', 'value')])   # This provides the discipline
+def update_box22(athlete_name, discipline):
+    # Extract the sex of the selected athlete from the DataFrame
+    athlete_sex = df[df['id'] == athlete_name]['sex'].iloc[0]
+
+    # Filter wc_data for WC_2022
+    filtered_data_2022 = wc_data[(wc_data['discipline'] == discipline) &
+                                 (wc_data['sex'] == athlete_sex) &
+                                 (wc_data['champs'] == 'WC_2022')]
+
+    # Filter wc_data for WC_2023
+    filtered_data_2023 = wc_data[(wc_data['discipline'] == discipline) &
+                                 (wc_data['sex'] == athlete_sex) &
+                                 (wc_data['champs'] == 'WC_2023')]
+
+    # Create the figure for 'box and whisker' for both years
+    fig6 = create_boxplot(filtered_data_2022, filtered_data_2023, discipline, athlete_sex)
+
+    # Return the figure wrapped in dcc.Graph
+    return dcc.Graph(figure=fig6)
+
+# Function to create a box plot for both WC_2022 and WC_2023
+def create_boxplot(data_2022, data_2023, discipline, sex):
+    fig6 = go.Figure()
+
+    # Check if filtered data for 2022 is not empty and add box plot
+    if not data_2022.empty:
+        fig6.add_trace(go.Box(y=data_2022['resultscore'], name='Oregon 2022'))
+
+    # Check if filtered data for 2023 is not empty and add box plot
+    if not data_2023.empty:
+        fig6.add_trace(go.Box(y=data_2023['resultscore'], name='Budapest 2023'))
+
+    # Update the layout and titles
+    fig6.update_layout(
+        title=f'{discipline} ({sex}) - Major Championship Final',
+        yaxis_title='Result Score')
+
+    return fig6
+
 
 # Run the app
 if __name__ == '__main__':
