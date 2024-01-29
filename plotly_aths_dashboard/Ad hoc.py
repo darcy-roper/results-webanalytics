@@ -429,9 +429,8 @@ def update_box22(athlete_name, discipline):
     # Filter Dataframe for athlete's top 10 best results
     # Ignoring all records where 'notlegal' = True
     filtered_data_athlete = df[(df['id'] == athlete_name) &
-                               (df['discipline'] == discipline) &
-                               (df['notlegal'] != 'True')] # ignores illegal performances
-    top_10 = filtered_data_athlete.nlargest(10, 'resultscore') # gets 10 best legal performances
+                               (df['discipline'] == discipline)]
+    top_10 = filtered_data_athlete.nlargest(10, 'resultscore') # gets 10 best performances all conditions
 
 
     # Create the figure for 'box and whisker' for championship years
@@ -445,9 +444,8 @@ def create_boxplot(data_2021, data_2022, data_2023, top_10, discipline, sex):
     fig6 = go.Figure()
 
     # Helper function to add box plot with integrated scatter points
-    def add_box_with_scatter(data, name, color):
+    def add_box_with_scatter(data, name, color, custom_hover_text=None):
         if not data.empty:
-            # Add box plot with integrated scatter points
             fig6.add_trace(go.Box(
                 y=data['resultscore'],
                 name=name,
@@ -456,22 +454,22 @@ def create_boxplot(data_2021, data_2022, data_2023, top_10, discipline, sex):
                 pointpos=0,  # Position points in the center
                 marker=dict(color=color, size=6),
                 hoverinfo='text',
-                text=data['RESULT'],  # Custom text for hover
-                hoverlabel=dict(namelength=-1), # Show full name in hover label
+                text=data[custom_hover_text] if custom_hover_text else data['RESULT'],  # Custom text for hover
+                hoverlabel=dict(namelength=-1),  # Show full name in hover label
                 line=dict(color=color)  # Set box plot line color
             ))
 
     # Default colours for each year's data
     colors = ['#BE95FE', '#FE863D', '#A5FA63']
-    # '#BE95FE', '#FE863D', '#A5FA63', '#FF33F6' default colours
 
     # Add box plots with scatter points for each dataset
     add_box_with_scatter(data_2021, 'Tokyo 2021', colors[0])
     add_box_with_scatter(data_2022, 'Oregon 2022', colors[1])
     add_box_with_scatter(data_2023, 'Budapest 2023', colors[2])
 
+    # Add box plot for the athlete's top 10 best results with integrated scatter points
     if not top_10.empty:
-        fig6.add_trace(go.Box(y=top_10['resultscore'], name="Athlete's Top 10 Best Results", line=dict(color='#FF33F6')))
+        add_box_with_scatter(top_10, "Athlete's Top 10 Best Results (all conditions)", '#FF33F6', custom_hover_text='mark')
 
     # Update the layout and titles
     fig6.update_layout(
