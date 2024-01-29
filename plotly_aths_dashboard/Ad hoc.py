@@ -444,29 +444,42 @@ def update_box22(athlete_name, discipline):
 def create_boxplot(data_2021, data_2022, data_2023, top_10, discipline, sex):
     fig6 = go.Figure()
 
-    # Check if filtered data for 2021 is not empty and add box plot
-    if not data_2021.empty:
-        fig6.add_trace(go.Box(y=data_2021['resultscore'], name='Tokyo 2021'))
+    # Helper function to add box plot with integrated scatter points
+    def add_box_with_scatter(data, name, color):
+        if not data.empty:
+            # Add box plot with integrated scatter points
+            fig6.add_trace(go.Box(
+                y=data['resultscore'],
+                name=name,
+                boxpoints='all',  # Display all points
+                jitter=0.3,  # Spread points
+                pointpos=0,  # Position points in the center
+                marker=dict(color=color, size=6),
+                hoverinfo='text',
+                text=data['RESULT'],  # Custom text for hover
+                hoverlabel=dict(namelength=-1), # Show full name in hover label
+                line=dict(color=color)  # Set box plot line color
+            ))
 
-    # Check if filtered data for 2022 is not empty and add box plot
-    if not data_2022.empty:
-        fig6.add_trace(go.Box(y=data_2022['resultscore'], name='Oregon 2022'))
+    # Default colours for each year's data
+    colors = ['#BE95FE', '#FE863D', '#A5FA63']
+    # '#BE95FE', '#FE863D', '#A5FA63', '#FF33F6' default colours
 
-    # Check if filtered data for 2023 is not empty and add box plot
-    if not data_2023.empty:
-        fig6.add_trace(go.Box(y=data_2023['resultscore'], name='Budapest 2023'))
+    # Add box plots with scatter points for each dataset
+    add_box_with_scatter(data_2021, 'Tokyo 2021', colors[0])
+    add_box_with_scatter(data_2022, 'Oregon 2022', colors[1])
+    add_box_with_scatter(data_2023, 'Budapest 2023', colors[2])
 
-    # Check if filtered data for athlete is not empty and add box plot
     if not top_10.empty:
-        fig6.add_trace(go.Box(y=top_10['resultscore'], name="Athlete's Top 10 Best Results"))
+        fig6.add_trace(go.Box(y=top_10['resultscore'], name="Athlete's Top 10 Best Results", line=dict(color='#FF33F6')))
 
     # Update the layout and titles
     fig6.update_layout(
-        title=f'{discipline} ({sex}) - Major Championship Final', title_x=0.4,
+        title=f'{discipline} ({sex}) - Major Championship Final',
+        title_x=0.42,
         yaxis_title='Result Score')
 
     return fig6
-
 
 # Run the app
 if __name__ == '__main__':
