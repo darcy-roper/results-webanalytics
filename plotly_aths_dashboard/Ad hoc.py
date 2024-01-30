@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.express as px
 
 # Load data
-df = pd.read_csv('Dataframe_Analysis.csv', sep='|')
+df = pd.read_csv('Athlete_Cleansed2023.csv', sep='|')
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
 # Load WC 2022 data for B&W plots
