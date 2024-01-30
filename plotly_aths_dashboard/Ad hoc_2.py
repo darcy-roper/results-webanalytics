@@ -10,11 +10,10 @@ import time
 df = pd.read_csv('Dataframe_Analysis.csv', sep='|')
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
-# Ignoring all records where 'notlegal' = True
-filtered_data_athlete = df[(df['id'] == 14550669) &
-                           (df['discipline'] == "Long Jump") &
-                           (df['notlegal'] != "True")] # only legal performances
+filtered_data = df[df['id'] == 14455361]
+dfb = filtered_data.copy()
+dfb['season'] = dfb['date'].dt.strftime('%Y')
+dfb['season'] = dfb['season'].astype(int)
+dfb['sn_best'] = dfb.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
 
-top_10 = filtered_data_athlete.nlargest(10, 'resultscore') # gets 10 best legal performances
-
-print(top_10['mark'])
+print(dfb)

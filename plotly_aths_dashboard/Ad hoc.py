@@ -18,7 +18,7 @@ wc_data = pd.read_csv('Datasets/WC22_Results.csv', sep=',')
 # Customize Plotly template
 plotly_template = pio.templates["plotly"]
 plotly_template.layout = {
-    'font': {'family': "Arial, sans-serif", 'color': '#fff', 'size': 14},
+    'font': {'family': "Arial, sans-serif", 'color': '#fff', 'size': 17},
     'title': {'x': 0.5, 'xanchor': 'left'},
     'paper_bgcolor': '#262626',  # Light grey
     'plot_bgcolor': '#262626',   # Transparent background for plot
@@ -52,7 +52,7 @@ athlete_dropdown = dcc.Dropdown(
     value=default_athlete_id,
     clearable=False,
     searchable=True,
-    style={'color': '#495057'}
+    style={'color': '#495057', 'size': 18}
 )
 
 # Dropdown for event selection
@@ -61,7 +61,7 @@ event_dropdown = dcc.Dropdown(
     options=[{'label': event, 'value': event} for event in default_athlete_events],
     value=default_event,
     multi=True,
-    style={'color': '#495057'}
+    style={'color': '#495057', 'size': 18}
 )
 
 # Graph components
@@ -243,12 +243,25 @@ def create_figure2(filtered_data):
     dfb['season'] = dfb['date'].dt.strftime('%Y')
     dfb['season'] = dfb['season'].astype(int)
     dfb['sn_best'] = dfb.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
-    fig2 = px.line(dfb, x="season", y="sn_best", color="disciplineCode", markers=True)
+    fig2 = px.line(dfb, x="season", y="sn_best", color="disciplineCode", markers=True,
+                   hover_data={'season': True,
+                               'sn_best': True,  # Format the season best score
+                               'mark': True,  # Add mark data to hover
+                               'disciplineCode': False})  # Hide discipline code from hover
+    # Customise hover template to include "Points Score" label
+    fig2.update_traces(hovertemplate="<br>".join([
+        "Season: %{x}",
+        "Points Score: %{y}",
+        "Mark: %{customdata[0]}"]))
     fig2.update_layout(legend_title_text='', title="Season's bests", title_x=0.4)
     fig2.update_xaxes(title='') # remove xaxis title
+    fig2.update_yaxes(title='Season Best Score (all conditions)')
     fig2.update_traces(line=dict(width=3), marker=dict(size=10, line=dict(width=1, color='Black')))
     return fig2
-
+###################################################################
+# the season best graph is not working correctly as it does not actually plot
+# the true season top score for a given year and discipline
+##################################################################
 
 # graph 3 callback
 @app.callback(
@@ -407,40 +420,42 @@ def create_figure5(filtered_data):
     Output('champ_bw_plot-wrapper', 'children'),
     [Input('athlete-dropdown', 'value'),  # This provides the name of the athlete
      Input('event-dropdown', 'value')])   # This provides the discipline
-def update_box22(athlete_name, discipline):
+def update_box22(athlete_name, event_selection):
     # Extract the sex of the selected athlete from the DataFrame
     athlete_sex = df[df['id'] == athlete_name]['sex'].iloc[0]
 
-    # Filter wc_data for WC_2022
-    filtered_data_2022 = wc_data[(wc_data['discipline'] == discipline) &
+    # Determine which discipline value to use
+    if isinstance(event_selection, list):
+        disciplines = event_selection
+    else:
+        disciplines = [event_selection]
+
+    # Filter wc_data for each championship year based on the selected disciplines and athlete's sex
+    filtered_data_2022 = wc_data[(wc_data['discipline'].isin(disciplines)) &
                                  (wc_data['sex'] == athlete_sex) &
                                  (wc_data['champs'] == 'WC_2022')]
 
-    # Filter wc_data for WC_2023
-    filtered_data_2023 = wc_data[(wc_data['discipline'] == discipline) &
+    filtered_data_2023 = wc_data[(wc_data['discipline'].isin(disciplines)) &
                                  (wc_data['sex'] == athlete_sex) &
                                  (wc_data['champs'] == 'WC_2023')]
 
-    # Filter OLY_data for 2021
-    filtered_data_2021 = wc_data[(wc_data['discipline'] == discipline) &
+    filtered_data_2021 = wc_data[(wc_data['discipline'].isin(disciplines)) &
                                  (wc_data['sex'] == athlete_sex) &
                                  (wc_data['champs'] == 'OLY_2021')]
 
     # Filter Dataframe for athlete's top 10 best results
-    # Ignoring all records where 'notlegal' = True
     filtered_data_athlete = df[(df['id'] == athlete_name) &
-                               (df['discipline'] == discipline)]
-    top_10 = filtered_data_athlete.nlargest(10, 'resultscore') # gets 10 best performances all conditions
-
+                               (df['discipline'].isin(disciplines)) &
+                               (df['notlegal'] != "True")]
+    top_10 = filtered_data_athlete.nlargest(10, 'resultscore')
 
     # Create the figure for 'box and whisker' for championship years
-    fig6 = create_boxplot(filtered_data_2021, filtered_data_2022, filtered_data_2023, top_10, discipline, athlete_sex)
+    fig6 = create_boxplot(filtered_data_2021, filtered_data_2022, filtered_data_2023, top_10, event_selection, athlete_sex)
 
-    # Return the figure wrapped in dcc.Graph
     return dcc.Graph(figure=fig6)
 
 # Function to create a box plot for both WC_2022 and WC_2023
-def create_boxplot(data_2021, data_2022, data_2023, top_10, discipline, sex):
+def create_boxplot(data_2021, data_2022, data_2023, top_10, selected_discipline, sex):
     fig6 = go.Figure()
 
     # Helper function to add box plot with integrated scatter points
@@ -473,7 +488,7 @@ def create_boxplot(data_2021, data_2022, data_2023, top_10, discipline, sex):
 
     # Update the layout and titles
     fig6.update_layout(
-        title=f'{discipline} ({sex}) - Major Championship Final',
+        title=f'{selected_discipline} ({sex}) - Major Championship Final',
         title_x=0.42,
         yaxis_title='Result Score')
 
