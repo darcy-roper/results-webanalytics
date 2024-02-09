@@ -1,24 +1,18 @@
 
-import dash
-from dash import dcc, html, Input, Output, State, callback_context
-import dash_bootstrap_components as dbc
 import pandas as pd
-import plotly.express as px
-import time
 
-# Load data
-df = pd.read_csv('Athlete_Cleansed2023.csv', sep='|')
-#df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
+# Load the CSV file
+df = pd.read_csv('iaaf_scoring_tables.csv')
 
-# #fishing for season's bests
-# filtered_data = df[df['id'] == 14455361]
-# dfb = filtered_data.copy()
-# dfb['season'] = dfb['date'].dt.strftime('%Y')
-# dfb['season'] = dfb['season'].astype(int)
-# dfb['sn_best'] = dfb.groupby(['season', 'disciplineCode'])['resultscore'].transform('max')
+# Add 'sex' column based on 'gender' column
+df['sex'] = df['gender'].apply(lambda x: 'M' if x == 'men' else 'W')
 
-# Get unique values in the 'discipline' column
-unique_disciplines = df['discipline'].unique()
+# Reorder columns to insert 'sex' between 'gender' and 'event'
+column_order = ['category', 'gender', 'sex', 'event', 'mark', 'points']
+df = df[column_order]
 
-# Print unique disciplines
-print(unique_disciplines)
+# Save the modified DataFrame to a new CSV file
+df.to_csv('iaaf_scoring_tables_modified.csv', index=False)
+
+print("CSV file has been modified and saved as 'iaaf_scoring_tables_modified.csv'")
+
