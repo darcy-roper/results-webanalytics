@@ -13,7 +13,7 @@ df = pd.read_csv('Athlete_Cleansed2023.csv', sep='|')
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
 # Load WC 2022 data for B&W plots
-wc_data = pd.read_csv('Datasets/WC22_Results.csv', sep=',')
+wc_data = pd.read_csv('Datasets/Champs_Results_New.csv', sep=',')
 
 # Customize Plotly template
 plotly_template = pio.templates["plotly"]

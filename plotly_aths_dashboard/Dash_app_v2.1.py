@@ -13,7 +13,7 @@ df = pd.read_csv('Athlete_Cleansed2023.csv', sep='|')
 df["date"] = pd.to_datetime(df["date"], infer_datetime_format=True)
 
 # Load WC 2022 data for B&W plots
-wc_data = pd.read_csv('Datasets/WC22_Results.csv', sep=',')
+wc_data = pd.read_csv('Datasets/Champs_Results_New.csv', sep=',')
 
 # Customize Plotly template
 plotly_template = pio.templates["plotly"]
@@ -80,13 +80,13 @@ app.layout = dbc.Container([
         dbc.Col(html.Img(src='/assets/World_Athletics_logo.png', style={'maxHeight': '65px', 'paddingLeft': '25px'}),
                 width={'size': 2, 'offset': 0},
                 class_name='top_rows',
-                style={'display': 'flex', 'alignItems': 'flex-end'}),
+                style={'display': 'flex', 'alignItems': 'flex-end', 'marginBottom': '5px'}),
 
         # Column for the "Powered by" text
         dbc.Col(html.Div('Powered by', style={'paddingLeft': '0px', 'alignSelf': 'flex-end', 'fontSize': '10px'}),
                 width={'size': 1, 'offset': 0},
                 class_name='top_rows',
-                style={'display': 'flex', 'alignItems': 'flex-end'}),
+                style={'display': 'flex', 'alignItems': 'flex-end', 'marginBottom': '5px'}),
 
         # Column for the title
         dbc.Col(html.H1('Australian Athlete Analytics',
@@ -95,10 +95,12 @@ app.layout = dbc.Container([
                                'display': 'flex',
                                'alignItems': 'center',
                                'justifyContent': 'center',
-                               'height': '100%'}),
+                               'fontSize': '44px',
+                               'height': '135%'}), # over adjusted height to push text in line with logo
                 width={'size': 6, 'offset': 0},
                 class_name='top_rows'),
         ], style={'height': '80px'}, class_name='top_rows'),
+
 
     dbc.Row([], style={'height': '15px'}), # another empty row
 
@@ -115,14 +117,14 @@ app.layout = dbc.Container([
         dbc.Col(id='sngraph-wrapper', children=[dcc.Graph(id='sngraph')], width=12, lg=6)
     ]),
     dbc.Row([
-        dbc.Col(id='mapgraph-wrapper', children=[dcc.Graph(id='mapgraph')], width=12, lg=6),
-        dbc.Col(id='placegraph-wrapper', children=[dcc.Graph(id='placegraph')], width=12, lg=6)
+        dbc.Col(id='champ_bw_plot-wrapper', children=[dcc.Graph(id='champ_bw_plot')], width=12),
     ]),
     dbc.Row([
         dbc.Col(id='year_prog_graph-wrapper', children=[dcc.Graph(id='year_prog_graph')], width=12)
     ]),
     dbc.Row([
-        dbc.Col(id='champ_bw_plot-wrapper', children=[dcc.Graph(id='champ_bw_plot')], width=12),
+        dbc.Col(id='mapgraph-wrapper', children=[dcc.Graph(id='mapgraph')], width=12, lg=6),
+        dbc.Col(id='placegraph-wrapper', children=[dcc.Graph(id='placegraph')], width=12, lg=6)
     ]),
     dcc.Interval(id='interval-component', interval=1*1000, n_intervals=0), # 1 second
     dcc.Store(id='initialization-store', data={'is_initialized': False}),
@@ -443,19 +445,19 @@ def update_box22(athlete_name, event_selection):
                                  (wc_data['sex'] == athlete_sex) &
                                  (wc_data['champs'] == 'OLY_2021')]
 
-    # Filter Dataframe for athlete's top 10 best results
+    # Filter Dataframe for athlete's top 12 best results
     filtered_data_athlete = df[(df['id'] == athlete_name) &
                                (df['discipline'].isin(disciplines)) &
                                (df['notlegal'] != "True")]
-    top_10 = filtered_data_athlete.nlargest(10, 'resultscore')
+    top_12 = filtered_data_athlete.nlargest(12, 'resultscore')
 
     # Create the figure for 'box and whisker' for championship years
-    fig6 = create_boxplot(filtered_data_2021, filtered_data_2022, filtered_data_2023, top_10, event_selection, athlete_sex)
+    fig6 = create_boxplot(filtered_data_2021, filtered_data_2022, filtered_data_2023, top_12, event_selection, athlete_sex)
 
     return dcc.Graph(figure=fig6)
 
 # Function to create a box plot for both WC_2022 and WC_2023
-def create_boxplot(data_2021, data_2022, data_2023, top_10, selected_discipline, sex):
+def create_boxplot(data_2021, data_2022, data_2023, top_12, selected_discipline, sex):
     fig6 = go.Figure()
 
     # Helper function to add box plot with integrated scatter points
@@ -483,8 +485,8 @@ def create_boxplot(data_2021, data_2022, data_2023, top_10, selected_discipline,
     add_box_with_scatter(data_2023, 'Budapest 2023', colors[2])
 
     # Add box plot for the athlete's top 10 best results with integrated scatter points
-    if not top_10.empty:
-        add_box_with_scatter(top_10, "Athlete's Top 10 Best Results (all conditions)", '#FF33F6', custom_hover_text='mark')
+    if not top_12.empty:
+        add_box_with_scatter(top_12, "Athlete's Top 10 Best Results (all conditions)", '#FF33F6', custom_hover_text='mark')
 
     # Update the layout and titles
     fig6.update_layout(
